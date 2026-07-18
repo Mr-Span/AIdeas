@@ -107,3 +107,53 @@
   passed on final branch commit `f5e2972`.
 - [PR #2](https://github.com/Mr-Span/AIdeas/pull/2) was marked ready only after
   the check passed, then merged into `main` as `97c3153`.
+
+## 2026-07-18 — AI-003 owner-local Codex feasibility harness
+
+- Priority was realigned: AI-003 is the sole active implementation front;
+  secured LAN identity/transport and final purge semantics are explicit backlog
+  with both features still disabled. The same state was written to and read
+  back from the AIdeas pilot and implementation-plan pages in Notion.
+- Target-host readback: system `codex-cli 0.145.0-alpha.18` and
+  `codex login status` reports `Logged in using ChatGPT`.
+- Official `@openai/codex-sdk` `0.144.5` is pinned. Its installed package
+  documents that it wraps a pinned Codex CLI and exchanges JSONL over
+  stdin/stdout. `codex exec` is the stable fallback/diagnostic surface; local
+  `codex app-server --help` identifies App Server as experimental.
+- Provider-neutral start/event/cancel/inspect contracts, safe error vocabulary,
+  workspace policy, environment allowlist, secret redaction, output bounds,
+  timeout, cancellation, duplicate-run rejection, and disabled-by-default
+  behavior are implemented under `src/server/execution`.
+- The SDK harness disables lifecycle hooks and configured MCP servers through
+  config overrides. A fixture containing project-scoped `.codex` configuration
+  is rejected before provider start. The browser and project API are not wired
+  to the provider.
+- Focused contract/integration suite: 2 files / 14 tests — pass. It includes
+  consumer-disconnect cancellation and protected/out-of-root workspace blocks.
+- Real owner-local suite `pnpm.cmd test:ai003:live`: 1 file / 2 tests — pass
+  after the security overrides. One run returned JSON-Schema output in a
+  read-only synthetic repo; the second was cancelled after the real
+  `thread.started` event.
+- Live fixture readback: Git status stayed clean and the README SHA-256 stayed
+  unchanged after both runs. The synthetic canary was absent from every
+  normalized AIdeas event. The main AIdeas checkout was a forbidden path.
+- Honest boundary: SDK threads are provider-managed resumable local sessions.
+  The harness proves AIdeas event redaction, not removal from provider session
+  history. Only synthetic data was used.
+- Final post-hardening `pnpm.cmd verify`: pass with lint, TypeScript, 6 files /
+  32 tests, and a warning-free Next.js production build.
+- `pnpm.cmd audit --prod` initially reported one moderate PostCSS advisory on
+  Next's transitive `postcss@8.4.31`. A workspace override pins `8.5.16` for the
+  dependency tree; `pnpm why postcss` reports one patched version and the final
+  production audit reports no known vulnerabilities.
+- Post-override `pnpm.cmd verify`: pass again with 6 files / 32 tests and the
+  production build. Final focused lint and typecheck after Playwright config
+  hardening also pass.
+- A repeated dev-mode E2E run on the old fixed `.aideas/e2e` data root exceeded
+  the original 5-second expectations while API buttons remained pending. The
+  harness now creates a fresh OS-temp data root per invocation and uses bounded
+  30-second expectations / 120-second test limits for slow Windows cold-route
+  compilation; no local retry was added.
+- Final `pnpm.cmd test:e2e`: pass, 4/4 Chromium tests. The existing intake
+  remains truthful: Research is blocked because no operator-only project run
+  route is enabled yet.

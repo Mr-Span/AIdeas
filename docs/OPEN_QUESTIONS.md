@@ -1,5 +1,9 @@
 # Decisions and remaining questions
 
+Priority update: AI-003 Codex owner-local integration is the sole active front.
+Points 4 and 5 below are explicit backlog. LAN access and automatic purge remain
+disabled, but these decisions no longer block provider feasibility work.
+
 ## Confirmed on 2026-07-18
 
 - public repository license: MIT;
@@ -26,7 +30,7 @@ category. The operator decided to keep it temporarily as an internal working
 name and replace it later. AIdeas remains the public product name; no public
 `Faur` rebrand is part of AI-002.
 
-## Point 4 — client contribution mode
+## Backlog BL-001 — client contribution transport and identity
 
 The architecture supports owner and limited-client actors without changing the
 canonical pipeline. Result visibility is now confirmed: the client sees the
@@ -41,7 +45,7 @@ The first pilot must still decide:
 2. the identity/session mechanism for the separate client;
 3. whether public-internet access is explicitly excluded from v1.
 
-## Point 5 — retention and deletion
+## Backlog BL-002 — final retention and deletion semantics
 
 The provisional lifecycle is `active -> completed -> 30-day grace -> purge`.
 Still confirm:

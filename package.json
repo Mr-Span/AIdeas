@@ -16,10 +16,12 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:e2e": "playwright test",
+    "test:ai003:live": "vitest run --config vitest.live.config.ts",
     "verify": "pnpm lint && pnpm typecheck && pnpm test:run && pnpm build",
     "verify:full": "pnpm verify && pnpm test:e2e"
   },
   "dependencies": {
+    "@openai/codex-sdk": "0.144.5",
     "@radix-ui/react-collapsible": "^1.1.16",
     "@radix-ui/react-label": "^2.1.11",
     "@radix-ui/react-progress": "^1.1.12",

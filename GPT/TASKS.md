@@ -49,8 +49,24 @@ end-to-end tests, and rendered desktop/mobile QA pass.
 
 ## AI-003 — ExecutionProvider feasibility harness
 
-Status: next after AI-002 integration. Codex owner-local is confirmed first;
-the UI truthfully keeps providers disconnected until this slice is implemented.
+Status: active. Codex owner-local is the only current implementation front;
+the UI truthfully keeps providers disconnected until a real tracked run starts.
+
+Current slice:
+
+- provider-neutral contract and normalized event/error vocabulary;
+- official TypeScript SDK adapter using the operator's host-local Codex auth;
+- `codex exec --json` retained as a stable fallback/diagnostic surface;
+- App Server excluded from the critical path while it remains experimental;
+- fixture-only live smoke with read-only sandbox, timeout, cancellation, secret
+  redaction, and proof that the main checkout is unchanged.
+
+Current evidence: provider contract and SDK harness implemented; 14 focused
+contract/integration tests pass; two real owner-local turns pass (structured
+read-only output and cancellation). Remaining before completion: durable broker
+ledger/restart reconciliation, worktree/process-tree supervisor, CLI recovery
+adapter, and operator-only project research route. See
+`docs/AI003_ARCHITECTURE_PACKET.md`.
 
 Acceptance:
 
@@ -61,6 +77,20 @@ Acceptance:
 - structured events, cancellation, timeout, rate-limit and auth errors;
 - fixture-only worktree, no writes to the main checkout;
 - official provider terms/auth boundary documented and tested.
+
+## Backlog — explicitly deferred after AI-003
+
+### BL-001 — Secured LAN client identity and transport
+
+Status: backlog. LAN remains disabled; no separate client device is enabled
+until transport, authentication, session revocation, origin/CSRF, and upstream
+request limits are implemented and verified.
+
+### BL-002 — Final purge semantics
+
+Status: backlog. The provisional completion-plus-30-days deadline remains, but
+automatic deletion stays disabled until warning/approval, residual audit,
+backup deletion lag, and early-deletion behavior are confirmed.
 
 ## AI-004 — Research and clarification round trip
 

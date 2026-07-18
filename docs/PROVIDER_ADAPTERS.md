@@ -18,6 +18,12 @@ Implementation order:
 
 ## Codex
 
+AI-003 target-host verification on 2026-07-18 found system Codex CLI
+`0.145.0-alpha.18`, an active ChatGPT login, and official TypeScript SDK
+`0.144.5`. The SDK is now pinned in the repository and the read-only/cancel live
+harness passes. See `AI003_ARCHITECTURE_PACKET.md` for the executable contract,
+evidence, and remaining limitations.
+
 OpenAI documents the TypeScript Codex SDK for server-side use and specifically
 lists internal tools, applications, agents and CI/CD as use cases. A thread can
 be continued or resumed, which fits AIdeas' provider port. For automation, the
@@ -35,6 +41,10 @@ execution in untrusted or public environments. Therefore:
 - no ChatGPT login session is copied into AIdeas, a client browser, Git or a
   remote runner;
 - `codex exec --json` is a controlled fallback, not the primary contract.
+
+App Server remains outside the critical path while its command surface is
+experimental. The stable CLI JSONL fallback is verified but not yet implemented
+as the recovery adapter.
 
 A client contribution is first persisted as immutable Markdown/media artifacts
 and a Project Graph revision. Only the trusted Control Service may subsequently

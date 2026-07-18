@@ -192,32 +192,39 @@ a new immutable revision.
 type ExecutionStart = {
   runId: string;
   workspacePath: string;
-  promptRef: string;
-  contextDigest: string;
+  prompt: string;
+  outputSchema?: Record<string, unknown>;
   capabilityGrant: CapabilityGrant;
   timeoutMs: number;
 };
 
 type ExecutionEvent =
-  | { type: "started"; providerRunId: string }
-  | { type: "message"; text: string }
-  | { type: "tool"; name: string; status: "started" | "completed" | "failed" }
-  | { type: "usage"; input?: number; output?: number; cost?: number }
-  | { type: "blocked"; code: string; detail: string }
-  | { type: "completed"; resultRef: string }
-  | { type: "failed"; code: string; retryable: boolean };
+  | { type: "started"; runId: string; providerRunId: string }
+  | { type: "message"; runId: string; text: string; truncated: boolean }
+  | { type: "tool"; runId: string; name: string; status: "started" | "completed" | "failed" }
+  | { type: "usage"; runId: string; inputTokens: number; cachedInputTokens: number; outputTokens: number; reasoningOutputTokens: number }
+  | { type: "blocked"; runId: string; code: string; detail: string }
+  | { type: "completed"; runId: string; providerRunId: string; resultText: string; resultDigest: string; truncated: boolean }
+  | { type: "failed"; runId: string; code: string; detail: string; retryable: boolean };
 
 interface ExecutionProvider {
   preflight(): Promise<ProviderHealth>;
   start(input: ExecutionStart): AsyncIterable<ExecutionEvent>;
-  cancel(providerRunId: string): Promise<CancelReceipt>;
-  inspect(providerRunId: string): Promise<ProviderRunState>;
+  cancel(runId: string): Promise<CancelReceipt>;
+  inspect(runId: string): Promise<ProviderRunState>;
 }
 ```
 
-Codex and Claude adapters normalize their SDK event streams to this contract.
-Provider-specific session IDs and usage remain adapter metadata. The runtime
-never lets a provider decide WorkItem or approval status.
+The durable broker owns `promptRef`, context/artifact digests, and the run
+ledger. It resolves a fixed packet into the ephemeral internal `prompt` passed
+to the adapter, then stores normalized results through Artifact Store. A client
+never supplies `workspacePath` or raw provider options.
+
+Codex and later Claude adapters normalize their SDK event streams to this
+contract. Provider-specific session IDs and usage remain adapter metadata. The
+runtime never lets a provider decide WorkItem or approval status. The executable
+AI-003 contract and current limitations are frozen in
+`AI003_ARCHITECTURE_PACKET.md`.
 
 ## Specialized research/planning roles
 
