@@ -17,15 +17,21 @@ Acceptance:
 
 Status: next eligible production task.
 
-Ownership: `src/server/storage/**`, `src/server/domain/**`, migrations, API route,
-contract/unit/integration tests, and the intake save/load connection.
+Ownership: `src/server/storage/**`, `src/server/artifacts/**`,
+`src/server/domain/**`, migrations, API route, contract/unit/integration tests,
+and the intake save/load connection.
 
 Acceptance:
 
 - one Control Service writer owns the database;
 - immutable `CaptureEvent` and versioned `ProjectRevision` persist;
+- original `capture.md` and synthetic media live in an Artifact Store outside
+  Git; SQLite stores their manifest, digest, provenance, and links;
 - save and reload survive restart;
-- idempotency key prevents duplicate submission;
+- idempotency key prevents duplicate rows and file bytes;
+- completion creates a provisional 30-day retention deadline and reopen cancels
+  it;
+- interrupted file/transaction boundaries reconcile safely;
 - backup/restore and `integrity_check` pass;
 - SQLite file and backups remain ignored by Git;
 - no browser or LAN client opens the database file.
@@ -34,12 +40,13 @@ Verification: `pnpm.cmd verify` plus storage integration and restart tests.
 
 ## AI-003 — ExecutionProvider feasibility harness
 
-Status: blocked by AI-002 contracts and operator auth-mode confirmation.
+Status: blocked by AI-002 contracts. Codex owner-local is confirmed first.
 
 Acceptance:
 
 - provider-neutral run/event/cancel/result contract;
-- Codex SDK adapter and Claude Agent SDK adapter behind the same port;
+- Codex owner-local SDK adapter behind the provider-neutral port;
+- Claude API/product adapter remains a later contract-compatible slice;
 - server-side credential handling; no secret reaches client/log/artifact;
 - structured events, cancellation, timeout, rate-limit and auth errors;
 - fixture-only worktree, no writes to the main checkout;

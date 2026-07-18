@@ -1,6 +1,6 @@
 # AIdeas implementation plan
 
-Status: `v0.2 draft`, 2026-07-18. This document owns ordering, work packets and
+Status: `v0.3 decision draft`, 2026-07-18. This document owns ordering, work packets and
 gates. A phase is complete only when its gate is demonstrated.
 
 ## Delivery principle
@@ -51,22 +51,29 @@ Work packets:
 1. define Zod contracts for `CreateProject`, `AppendCapture`,
    `ProposeChangeSet`, `ApproveChangeSet`, and query DTOs;
 2. add SQLite driver, migrations and one-writer repository boundary;
-3. persist immutable captures, projects, revisions, nodes, edges, audit and
-   idempotency receipts;
+3. persist immutable captures, projects, revisions, nodes, edges, artifact
+   manifests/links, audit and idempotency receipts;
 4. add API handlers with actor, origin/CSRF, body limits, idempotency and
    expected version;
 5. connect save/load/submit in the UI and add pending/error/recovery states;
-6. add attachment metadata plus content-addressed local artifact directory;
-7. implement backup, restore, integrity and migration smoke tests.
+6. write original `capture.md` and synthetic media to a content-addressed local
+   Artifact Store outside Git, with quarantine and atomic promotion;
+7. add active/completed/grace/pinned/purge lifecycle fields and calculate the
+   provisional completion-plus-30-days deadline;
+8. implement interrupted-boundary reconciliation, backup, restore, integrity,
+   and migration smoke tests.
 
 Gate P1:
 
 - create/save/reload works across process restart;
 - duplicate submission returns the original result, not a second revision;
 - stale expected version returns a visible conflict;
-- original capture and every approved revision can be reconstructed;
+- original Markdown/media capture and every approved revision can be reconstructed;
+- the same idempotency key does not duplicate files or manifest rows;
+- completion creates a 30-day deadline and reopening cancels it;
 - database and artifacts never enter Git;
-- LAN test client can use API but cannot open the DB path.
+- a limited test actor uses the same capture API but cannot open the DB or choose
+  a host filesystem path; actual LAN exposure waits for point 4.
 
 ## Phase 2 — Provider feasibility and normalized execution
 
@@ -76,20 +83,21 @@ sandboxing are the highest uncertainties.
 Sequence:
 
 1. freeze `ExecutionProvider` contract and event schema;
-2. implement Codex TypeScript SDK adapter server-side;
+2. implement the operator's Codex owner-local TypeScript SDK adapter server-side;
 3. implement structured CLI fallback only for controlled recovery;
-4. implement Claude Agent SDK adapter with supported authentication boundary;
-5. normalize start, stream, usage, interrupt, timeout, auth failure, rate limit,
+4. normalize start, stream, usage, interrupt, timeout, auth failure, rate limit,
    resume/inspect and final result;
-6. create fixture repository and worktree manager;
-7. apply path, command, network and duration capability grants;
-8. add canary-secret redaction and event/artifact filters;
-9. crash the broker/runner at each side-effect boundary and reconcile.
+5. create fixture repository and worktree manager;
+6. apply path, command, network and duration capability grants;
+7. add canary-secret redaction and event/artifact filters;
+8. crash the broker/runner at each side-effect boundary and reconcile;
+9. schedule Claude API/product mode only after the common contract is stable.
 
 Gate P2:
 
-- both adapters pass the same contract tests or an adapter is explicitly
-  rejected with evidence;
+- the Codex owner-local adapter passes the common contract and security tests;
+- contract fixtures define the later Claude API adapter without sharing a
+  personal subscription or client-facing login;
 - a run can be cancelled and inspected after restart;
 - main checkout remains unchanged;
 - provider credentials are absent from browser, prompt packet, logs, artifacts
@@ -230,5 +238,7 @@ flows are separate projects.
 ## Immediate next task
 
 AI-002 is the only next eligible production task: persist one project, its
-immutable captures and approved revisions in SQLite and make save/reload survive
-a restart. Provider integration waits for that stable contract.
+immutable Markdown/media artifacts, manifests, captures, retention deadline,
+and approved revisions across the Artifact Store plus SQLite, then make
+save/reload survive a restart. Provider integration waits for that stable
+contract.

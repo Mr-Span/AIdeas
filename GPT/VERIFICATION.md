@@ -41,3 +41,21 @@
 - Remote path scan found no `.env`, `.aideas`, database/SQLite, Playwright
   report, test-results, or TypeScript build-metadata path.
 - Local `main` tracks `origin/main`.
+
+## 2026-07-18 — Decision record v0.3
+
+- Operator decisions captured: MIT license, Codex owner-local first, immutable
+  Markdown/media ingest, SQLite manifest ownership, and provisional active plus
+  30-day post-completion retention.
+- Exact-name research found an existing Romanian AI company at `faur.ai` with a
+  `Forge` product; `Faur` is recorded as internal/provisional rather than unique
+  or legally cleared.
+- New data-ingest specification separates file bytes in an Artifact Store from
+  structured manifests and Project Graph state in SQLite.
+- `pnpm.cmd lint`: pass.
+- `pnpm.cmd typecheck`: pass.
+- `pnpm.cmd test:run`: pass, 1 file / 3 tests.
+- No application source or rendered UI changed; the branch CI build remains the
+  clean-clone production-build gate.
+- Notion hub, AIdeas pilot, architecture, implementation, and reconciliation
+  pages were updated and read back successfully with no stale `Urzeon` entry.

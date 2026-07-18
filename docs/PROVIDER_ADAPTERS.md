@@ -11,9 +11,10 @@ protocol.
 
 Implementation order:
 
-1. Codex adapter because AIdeas and the wider forge are Codex-first;
-2. Claude adapter behind the same contract;
-3. accept/reject each adapter by contract and security tests, not feature count.
+1. Codex owner-local adapter on the trusted operator host;
+2. stabilize the provider-neutral contract and security tests;
+3. Claude API/product adapter behind the same contract in a later slice;
+4. accept/reject each adapter by contract and security tests, not feature count.
 
 ## Codex
 
@@ -28,12 +29,17 @@ Codex can authenticate locally with ChatGPT or an API key. OpenAI recommends API
 key authentication for programmatic workflows and warns not to expose Codex
 execution in untrusted or public environments. Therefore:
 
-- trusted owner mode may use a local authenticated Codex installation;
+- v1 owner mode uses the operator's locally authenticated Codex installation;
 - client/product mode uses supported programmatic authentication and isolated
   billing/runtime;
 - no ChatGPT login session is copied into AIdeas, a client browser, Git or a
   remote runner;
 - `codex exec --json` is a controlled fallback, not the primary contract.
+
+A client contribution is first persisted as immutable Markdown/media artifacts
+and a Project Graph revision. Only the trusted Control Service may subsequently
+enqueue an owner-local Codex run. Uploading a file is not authority to execute a
+provider, repository action, or external side effect.
 
 Official sources:
 

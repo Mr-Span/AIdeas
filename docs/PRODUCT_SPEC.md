@@ -1,6 +1,6 @@
 # AIdeas product specification
 
-Status: `v0.2 draft`, 2026-07-18. This document owns product behavior and
+Status: `v0.3 decision draft`, 2026-07-18. This document owns product behavior and
 acceptance. Technical ownership lives in `ARCHITECTURE.md`; delivery sequencing
 lives in `IMPLEMENTATION_PLAN.md`.
 
@@ -13,6 +13,19 @@ questions, alternatives, decisions, risks, and evidence.
 
 The product is personal in v1. The operator may use it with clients, but clients
 do not receive the operator's agent accounts or unrestricted access to the host.
+
+AIdeas supports two intake contexts through one pipeline:
+
+- the operator uses the trusted local installation and may later authorize a
+  locally authenticated Codex run;
+- a limited client contributes cards, Markdown, and media, which are first saved
+  to the operator-controlled system without exposing provider or repository
+  authority.
+
+Original Markdown/media are immutable artifacts outside Git. SQLite stores
+their manifests, digests, provenance, semantic links, and retention state. The
+provisional lifecycle retains them until explicit project completion plus 30
+days; final client transport and purge semantics remain operator decisions.
 
 ## People and responsibilities
 
@@ -119,9 +132,9 @@ more repositories, source packs, policies, and approved revisions.
 
 | ID | Requirement | v1 acceptance |
 |---|---|---|
-| F-01 | preserve original idea | capture bytes/text and digest can be reconstructed |
+| F-01 | preserve original idea | immutable Markdown/media and digest can be reconstructed |
 | F-02 | interview adaptively | next questions derive from uncovered dimensions and approved facts |
-| F-03 | use media and notes | metadata and artifacts remain linked to capture/revision with provenance |
+| F-03 | use media and notes | Artifact Store bytes and SQLite manifests remain linked to capture/revision with provenance |
 | F-04 | research the web | every material claim has a source reference and retrieval timestamp |
 | F-05 | propose alternatives | A/B choices include benefits, limits, risk and a validation method |
 | F-06 | produce Project Graph revision | typed proposal validates against base revision before apply |
@@ -143,6 +156,8 @@ more repositories, source packs, policies, and approved revisions.
 - audit timeline for state changes and side effects;
 - projections and indexes rebuildable from canonical records;
 - local backup, restore, retention and disk-headroom controls;
+- active-project retention plus a provisional 30-day post-completion grace
+  period, with pin/reopen and auditable purge behavior;
 - synthetic demo data in the public repository.
 
 ## Real benefits to validate
