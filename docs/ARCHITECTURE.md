@@ -1,6 +1,6 @@
 # AIdeas architecture
 
-Status: `v0.2 draft`, 2026-07-18. This document owns technical boundaries,
+Status: `v0.3 decision draft`, 2026-07-18. This document owns technical boundaries,
 contracts and failure behavior. It implements the canonical Project Forge model
 for the AIdeas pilot without activating every future module.
 
@@ -8,8 +8,11 @@ for the AIdeas pilot without activating every future module.
 
 ```mermaid
 flowchart LR
-  Client[Client or operator] --> UI[AIdeas Command Center]
-  UI --> API[Control Service]
+  Client[Limited client browser] --> UI[AIdeas Command Center]
+  Operator[Operator on trusted host] --> UI
+  UI --> Ingest[Capture and Upload Gateway]
+  Ingest --> API[Control Service]
+  Ingest --> Files[(Content-addressed Artifact Store)]
 
   API --> Intent[Intent and Project Graph]
   API --> Work[Work Control and FSM]
@@ -23,6 +26,7 @@ flowchart LR
   Policy --> DB
   Evidence --> DB
   Audit --> DB
+  Evidence --> Files
 
   Work --> Broker[Execution Broker]
   Context --> Broker
@@ -51,16 +55,34 @@ This is a modular monolith for operational simplicity. Module boundaries are
 enforced in TypeScript packages/directories and ports, not by deploying many
 services prematurely.
 
+## Owner and client intake modes
+
+Both modes use the same validated capture pipeline and canonical data model.
+They differ in actor permissions and provider authority, not in storage format.
+
+- **Owner mode:** the operator enters or imports data on the trusted host. Once
+  the capture transaction succeeds, policy may enqueue the locally authenticated
+  Codex adapter.
+- **Client contribution mode:** a limited authenticated browser submits assigned
+  cards, Markdown, and media. It cannot access Codex, repositories, execution,
+  approvals, database files, or host paths.
+
+Uploads enter quarantine, receive size/type checks and a digest, then move into
+the application-owned Artifact Store. SQLite records the manifest, provenance,
+links, Project Graph revision, audit, and retention state. Large media bytes are
+not stored as SQLite BLOBs. The detailed lifecycle is owned by
+`DATA_INGEST_AND_RETENTION.md`.
+
 ## Ownership matrix
 
 | Information | Canonical owner | Projection / derived view |
 |---|---|---|
-| original input | immutable Capture Store | summaries and question context |
+| original input | immutable `capture.md` plus artifact manifest | summaries and question context |
 | approved requirements, decisions, risks, constraints | versioned Project Graph | readable plan pages, Obsidian notes |
 | queue, dependency, lease and attempt status | Work Control | boards and progress rails |
 | workflow checkpoint and timers | Runtime FSM | timeline |
 | source code and integration history | Git | diffs, indexes and evidence previews |
-| large files and run outputs | content-addressed Artifact Store | thumbnails and downloads |
+| client media and run outputs | content-addressed Artifact Store outside Git | thumbnails and downloads |
 | approvals | Approval Store bound to digest and policy version | approval inbox |
 | human knowledge | explicitly approved knowledge records | search index and Obsidian projection |
 | semantic search index | none; rebuildable | retrieval result only |
@@ -101,15 +123,18 @@ workflow_runs(id, work_item_id, definition_version, status, checkpoint_json)
 attempts(id, workflow_run_id, provider, lease_id, fencing_token, status)
 context_packets(id, revision_id, base_commit, digest, manifest_json)
 approval_requests(id, action_class, subject_digest, policy_version, status)
-artifacts(id, digest, media_type, byte_size, storage_key, created_at)
+artifacts(id, digest, media_type, byte_size, storage_key, retention_class,
+          retention_due_at, purged_at, created_at)
+capture_artifacts(capture_id, artifact_id, purpose, original_name)
 evidence_bundles(id, attempt_id, commit_digest, policy_version, manifest_json)
 audit_events(id, correlation_id, actor_id, kind, subject_id, payload_json)
 outbox(id, topic, payload_json, idempotency_key, delivered_at)
 ```
 
-The first durable slice only implements the subset required for Capture,
-ProjectRevision, idempotent command receipt and audit. Tables appear when their
-behavior is tested, not all at once.
+The first durable slice implements the subset required for Capture,
+ProjectRevision, artifact manifest/link, idempotent command receipt, retention
+deadline, and audit. Tables appear when their behavior is tested, not all at
+once.
 
 ## SQLite rules
 
@@ -119,6 +144,9 @@ behavior is tested, not all at once.
 - Commands carry an idempotency key and expected aggregate version.
 - A transaction updates domain state, audit record and outbox together.
 - Workers cannot write SQLite; they call internal result/heartbeat commands.
+- Client and provider processes never open SQLite or choose storage paths.
+- Markdown/media bytes live in the Artifact Store; SQLite stores their digest,
+  metadata, provenance, link, and lifecycle state.
 - Checkpoint/backup is coordinated by the writer; restore ends with
   `PRAGMA integrity_check` and application consistency checks.
 - Disk headroom, WAL growth and backup age are health gates.
@@ -244,6 +272,7 @@ a Git approval.
 POST /api/projects
 GET  /api/projects/:id
 POST /api/projects/:id/captures
+POST /api/projects/:id/submission-bundles
 POST /api/projects/:id/change-sets
 POST /api/change-sets/:id/approve
 GET  /api/projects/:id/revisions/:revisionId

@@ -1,55 +1,49 @@
-# Open decisions for operator confirmation
+# Decisions and remaining questions
 
-Most architecture-changing questions are closed. These decisions remain:
+## Confirmed on 2026-07-18
 
-## 1. Forge name
+- public repository license: MIT;
+- first execution provider: Codex owner-local on the trusted operator host;
+- client/product browser never receives the local Codex session or credentials;
+- client submissions are preserved as Markdown plus media artifacts;
+- SQLite stores structured state, manifests, provenance, digests, links, and
+  retention state rather than large binary media blobs;
+- provisional retention: through active project work and 30 days after explicit
+  completion;
+- repository approval toggle defaults off (autonomous after evidence gates),
+  while policy may force approval.
 
-Recommendation: approve `Urzeon` as the working name and run formal clearance
-before using it publicly. Alternative: keep `Project Forge` as codename while a
-new naming round is run.
+## Branding blocker
 
-## 2. Public repository license
+The operator selected `Faur`, from Romanian `a făuri`. Research found an
+existing Bucharest AI company at `faur.ai` whose platform includes a product
+named `Forge`. `Faur` is therefore authentic but not unique in the target
+category. Decide whether it remains an internal name, is used despite the
+collision after legal review, or is replaced by a distinctive public form.
 
-The repository should remain public without a license until you choose one.
-That preserves copyright but does not grant reuse rights. Recommendation for an
-open-source project: Apache-2.0 if you want an explicit patent grant; MIT if you
-want the shortest permissive license.
+## Point 4 — client contribution mode
 
-## 3. Personal provider authentication
+The architecture supports owner and limited-client actors without changing the
+canonical pipeline. The first pilot must still decide:
 
-Recommendation: support two explicit modes, never an ambiguous shared login:
+1. separate client device over secured LAN, operator-assisted entry, or an
+   importable submission bundle;
+2. append-only client revisions versus editing an unsubmitted draft;
+3. whether the client sees returned research/plan results;
+4. whether public-internet access is explicitly excluded from v1.
 
-- `owner-local`: call the operator's locally authenticated provider on the
-  trusted host, personal use only;
-- `api-product`: supported API/enterprise credentials and separate billing for
-  any client-facing or public service.
+## Point 5 — retention and deletion
 
-Confirm whether v1 should implement `owner-local` for both providers or Codex
-first, followed by Claude API mode.
+The provisional lifecycle is `active -> completed -> 30-day grace -> purge`.
+Still confirm:
 
-## 4. Client role on LAN
+1. completion is an explicit operator action rather than inferred from merge,
+   delivery, or billing;
+2. whether a seven-day warning is informational or deletion needs approval;
+3. what minimal audit/digests may remain after file purge;
+4. maximum backup deletion lag (recommended: 30 additional days);
+5. client early-deletion requests and any contractual evidence exception.
 
-Recommendation: even though the installation is personal, model two roles from
-the first LAN release:
-
-- operator: providers, repositories, approvals and execution;
-- contributor/client: assigned intake, notes and media only.
-
-Confirm whether a client will ever connect from a separate device in the first
-pilot, or whether all client input is entered by you.
-
-## 5. Media retention
-
-Recommendation: file bytes live in a content-addressed local artifact directory;
-SQLite stores metadata, digest, provenance and retention state. Confirm the
-default retention window for rejected/unapproved media; proposed default is 30
-days with manual pinning.
-
-## 6. Approval-toggle default
-
-Requirement says push/PR/merge should be autonomous. Recommendation: repository
-approval toggle defaults **off**, while risk policy can force approval. Confirm
-that new projects should inherit this autonomous default.
-
-None of these blocks publishing the current public-safe UI shell. They must be
-closed before their corresponding runtime feature ships.
+The client-mode transport and final purge semantics do not block the AI-002
+local persistence slice. They do block enabling LAN client upload and automatic
+deletion in production.

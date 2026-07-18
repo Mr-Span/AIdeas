@@ -28,6 +28,26 @@ provider subprocess/request boundary.
 AIdeas documentation lists setting names and setup flows, not secret values. No
 repo-local env file is required by the current UI.
 
+## Client data ingress
+
+The limited client role sends cards, Markdown, and media only through an
+authenticated Control Service endpoint. It never writes a shared folder or
+database directly. The upload boundary requires:
+
+- project assignment, revocable session, CSRF/origin checks, rate and quota
+  limits;
+- streamed quarantine with total/per-file size limits;
+- allowlisted MIME/content detection, safe filenames, digest calculation, and
+  configured malware/content checks;
+- application-generated storage keys; browser paths and filenames are data, not
+  filesystem authority;
+- atomic Artifact Store promotion plus SQLite manifest/audit receipt;
+- no provider execution merely because a client uploaded content.
+
+Original media lives outside Git in an application-owned, content-addressed
+Artifact Store. SQLite stores metadata, digest, provenance, links, and retention
+state; large media is not stored as database BLOBs.
+
 ## Trust zones
 
 ```text
@@ -68,6 +88,16 @@ data; it cannot grant tools, network, filesystem or side-effect permission.
 An approval is valid only for its exact action class, target, subject digest,
 policy version and expiration. Git approval cannot authorize deploy, publication
 or payment. Any material change invalidates approval and re-runs policy.
+
+## Retention and deletion
+
+The provisional default retains client/project artifacts while active and for
+30 days after explicit operator completion. Reopening cancels the deadline; a
+documented pin/legal hold suspends deletion. The automatic purge worker must use
+allowlisted application-owned paths, produce a receipt, remove derived previews
+and extracted text, and propagate deletion to backups within the final approved
+backup window. Exact post-purge audit retention and early client deletion remain
+open decisions; see `DATA_INGEST_AND_RETENTION.md`.
 
 ## Public-publish checklist
 

@@ -3,36 +3,40 @@
 ## Product
 
 `AIdeas` / `AI Ideas` remains the pilot product name chosen by the operator.
-It is easy to understand but is already used by unrelated repositories and
-projects, so the forge umbrella must carry the more distinctive long-term
-identity.
+It is the client-facing idea-intake product and the first real project built by
+the wider forge.
 
-## Forge umbrella — working candidate: Urzeon
+## Forge umbrella — operator-selected name: Faur
 
-`Urzeon` is a coined name influenced by Romanian `a urzi` / `urzeală`: to weave
-threads into a coherent structure. That matches the system's job: it does not
-merely generate code; it weaves intent, evidence, decisions, work and outcomes.
+`Faur` comes from Romanian `a făuri`: to forge, craft, or bring something into
+being. The meaning is authentic and fits a system that turns incomplete intent
+into a researched plan, implementation, evidence, and outcome.
 
-Reasons it fits:
+## Collision discovered on 2026-07-18
 
-- Romanian root without being difficult to type internationally;
-- product story is about connected threads and provenance, not generic “AI”;
-- distinct from overused `Forge`, `Foundry`, `AgentOS` and `IdeaForge` names;
-- can hold multiple products, with AIdeas as the first one.
+`Faur` is **not unique in the current AI market**:
 
-Initial exact-name web and package/repository checks found no obvious software
-collision. This is only a preliminary signal. It is **not** trademark, company,
-social-handle or domain clearance.
+- [faur.ai](https://www.faur.ai/) is an existing Bucharest enterprise-AI
+  company;
+- that company already markets an AI product named
+  [Forge](https://www.faur.ai/forge), creating a direct semantic and category
+  overlap;
+- [FAUR SA](https://faur.ro/ro/component/content/frontpage.html) is also a
+  long-established Romanian industrial company.
+
+Therefore the repo records `Faur` as the operator-selected **working/internal
+name**, not as a cleared unique public brand. AIdeas public branding remains
+unchanged until the operator explicitly accepts the collision or selects a
+distinctive compound/coined alternative.
 
 ## Gate before public umbrella branding
 
-1. operator approves pronunciation, spelling and story;
-2. EUIPO, WIPO and relevant national/company registries are searched by a human;
-3. primary domains and social handles are verified through authoritative
-   registrars/platforms;
-4. GitHub organization/package namespaces are checked;
-5. legal clearance is recorded;
-6. only then are logo, organization, domains and public product copy created.
+1. decide whether `Faur` is internal-only or must be public and protectable;
+2. if public, resolve the direct `faur.ai` category collision;
+3. search EUIPO, WIPO, OSIM, company registries, domains, social handles, GitHub
+   organizations, and package namespaces through authoritative sources;
+4. record legal clearance and the permitted goods/services/geographies;
+5. only then rename the Notion hub, create a logo, organization, domains, or
+   public umbrella copy.
 
-Until that gate, documentation may say `Urzeon (working name)` and the Notion
-hub may retain `Project Forge` as an architecture codename.
+This document does not make a trademark or legal-availability claim.

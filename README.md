@@ -4,8 +4,10 @@ AIdeas is a personal, local-first workspace for turning a rough application or
 website idea into a researched, clarified, reviewable, and eventually
 executable implementation plan.
 
-The repository is also the pilot project for the wider agentic forge. It must
-prove the workflow on itself before it is trusted to build other products.
+The repository is also the pilot project for the wider agentic forge. The
+operator-selected working name is `Faur`, but public umbrella branding remains
+unresolved because a direct AI-market collision exists. AIdeas must prove the
+workflow on itself before it is trusted to build other products.
 
 ## Current status
 
@@ -55,5 +57,11 @@ browser. See [Security](docs/SECURITY.md) and
 - [Architecture](docs/ARCHITECTURE.md)
 - [Implementation plan](docs/IMPLEMENTATION_PLAN.md)
 - [Open decisions](docs/OPEN_QUESTIONS.md)
+- [Data ingest and retention](docs/DATA_INGEST_AND_RETENTION.md)
+- [Naming and clearance status](docs/NAMING.md)
 - [Design specification](docs/design/README.md)
 - [Agent resume packet](GPT/README.md)
+
+## License
+
+Licensed under the [MIT License](LICENSE).

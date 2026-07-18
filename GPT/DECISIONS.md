@@ -2,9 +2,9 @@
 
 ## 2026-07-18 — Product and operator boundary
 
-Personal, single-operator product with optional secured LAN access. The
-client-facing intake does not imply that clients receive provider credentials or
-direct runtime access.
+Personal, single-operator product with optional secured client contribution.
+The client-facing intake never grants provider credentials, repository access,
+database access, host paths, execution, or external-side-effect authority.
 
 ## 2026-07-18 — Human checkpoints
 
@@ -15,25 +15,43 @@ gates. Payments, publication, and deploy always require approval.
 ## 2026-07-18 — Canonical data ownership
 
 Project Graph owns approved semantics; Work Control owns execution status; Git
-owns code; SQLite is the v1 operational store; Obsidian is a future
-knowledge/projection surface.
+owns code; SQLite owns structured operational records and manifests; original
+Markdown/media and large outputs live in a content-addressed Artifact Store
+outside Git. Obsidian remains a future knowledge/projection surface.
 
-## 2026-07-18 — Pilot and repository
+## 2026-07-18 — Owner and client ingest
 
-AIdeas is the real pilot product. Its repository is public, but secrets, `.env`
-files, provider sessions, client data, SQLite files, and runtime artifacts are
-excluded.
+Owner and limited-client modes use the same capture pipeline. Client data is
+first preserved as immutable Markdown/media artifacts and recorded in SQLite by
+manifest, digest, provenance, links, audit, and retention state. A client never
+writes SQLite or calls Codex directly. Only the trusted Control Service may
+enqueue analysis after persistence and policy checks.
 
-## 2026-07-18 — Provider boundary
+Point 4 remains open: separate secured-LAN client, operator-assisted entry, or
+an importable submission bundle for the first pilot.
 
-Use server-side provider adapters. Trusted personal mode may call a locally
-authenticated tool, but client/product mode must use provider-supported API or
-enterprise authentication and separate billing.
+## 2026-07-18 — Retention
 
-## 2026-07-18 — Forge name
+Provisional default: retain project data while active and for 30 days after an
+explicit operator completion event. Reopening cancels the deadline; pin/legal
+hold suspends purge. Post-purge audit data, warnings, backup deletion lag, and
+early client deletion remain open under point 5.
 
-Provisional: `Urzeon` is the leading working candidate because it evokes the
-Romanian “a urzi” — to weave/construct — and no obvious exact-name software
-collision appeared in preliminary checks. This is not proof of availability. It
-requires operator approval and formal trademark/domain clearance before release
-branding.
+## 2026-07-18 — Provider order
+
+Implement Codex owner-local first on the trusted operator host. Stabilize a
+provider-neutral contract before adding Claude API/product mode. Never share the
+operator's personal session with a client.
+
+## 2026-07-18 — Public license
+
+The AIdeas public repository uses the MIT License, copyright 2026 Mr-Span.
+
+## 2026-07-18 — Forge name and collision
+
+The operator selected `Faur`, from Romanian `a făuri`, as the desired forge
+name. Research found an existing Bucharest enterprise-AI company at `faur.ai`
+whose platform includes a product named `Forge`, plus the established FAUR SA.
+Therefore `Faur` is recorded as a working/internal name, not a cleared unique
+public brand. AIdeas public branding remains unchanged pending an explicit
+collision decision and formal clearance.
