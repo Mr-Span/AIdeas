@@ -2,7 +2,7 @@
 
 ## AI-001 — Bootstrap the public pilot and truthful intake UI
 
-Status: done locally; GitHub publication pending.
+Status: complete. Public repository: `https://github.com/Mr-Span/AIdeas`.
 
 Acceptance:
 
@@ -15,7 +15,7 @@ Acceptance:
 
 ## AI-002 — SQLite durable draft slice
 
-Status: next eligible after AI-001 publication.
+Status: next eligible production task.
 
 Ownership: `src/server/storage/**`, `src/server/domain/**`, migrations, API route,
 contract/unit/integration tests, and the intake save/load connection.

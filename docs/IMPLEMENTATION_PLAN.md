@@ -23,7 +23,8 @@ must be reversible and noncritical.
 
 ## Phase 0 — Public-safe product shell
 
-Status: implemented locally in AI-001; publication gate pending.
+Status: complete in AI-001 and published at
+`https://github.com/Mr-Span/AIdeas`.
 
 Delivered:
 
@@ -32,7 +33,7 @@ Delivered:
 - truthful disconnected-provider and non-persistence states;
 - design concepts and repo-local control plane;
 - public-repository secret/data exclusions;
-- lint, typecheck and initial unit verification.
+- lint, typecheck, unit, production build and focused browser verification.
 
 Gate P0:
 
@@ -228,7 +229,6 @@ flows are separate projects.
 
 ## Immediate next task
 
-After AI-001 is published, AI-002 is the only next eligible production task:
-persist one project, its immutable captures and approved revisions in SQLite and
-make save/reload survive a restart. Provider integration waits for that stable
-contract.
+AI-002 is the only next eligible production task: persist one project, its
+immutable captures and approved revisions in SQLite and make save/reload survive
+a restart. Provider integration waits for that stable contract.

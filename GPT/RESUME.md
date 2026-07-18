@@ -1,20 +1,22 @@
 # Resume
 
-Active task: AI-001.
+Active task: AI-002 — SQLite durable draft slice.
 
-Last verified state: the responsive intake UI is implemented; template backend
-dependencies requiring secrets were removed; install, lint, typecheck, and the
-initial unit smoke test pass.
+Last verified state: AI-001 is complete and published at
+`https://github.com/Mr-Span/AIdeas`. The responsive intake UI, public-safe
+documentation, visual concepts, tests, build, secret scans, and remote GitHub
+readback all pass.
 
 Known honest boundary: UI state is in-memory only; no SQLite persistence or
-agent provider is active.
+agent provider is active. Do not start provider integration before the storage
+contracts are stable.
 
 Next sequence:
 
-1. add focused unit/e2e coverage;
-2. run build and Playwright desktop/mobile;
-3. compare screenshots to both accepted concepts;
-4. run secret/env/client-data scan;
-5. initialize Git, review status/diff, commit, create public GitHub repository,
-   push, and verify visibility/files remotely;
-6. update Notion with the repository link and AI-002 as next eligible task.
+1. define commands, queries, immutable capture events, and project revisions;
+2. add SQLite migrations behind a single-writer Control Service boundary;
+3. implement idempotent create/save/load/submit handlers with version checks;
+4. connect the intake UI to durable save/load and explicit recovery states;
+5. prove restart durability, duplicate-submit behavior, backup/restore, and
+   `integrity_check`;
+6. keep the database, backups, artifacts, and all client content outside Git.

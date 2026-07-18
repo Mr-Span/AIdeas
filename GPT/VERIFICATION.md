@@ -28,6 +28,16 @@
   build output, coverage, Playwright reports, and TypeScript build metadata.
 - GitHub CLI `2.96.0` is authenticated as `Mr-Span`.
 - `Mr-Span/AIdeas` did not exist at preflight time.
+- Staged `git diff --check`: pass; staged secret scan: clean.
 
-Pending: Git initialization, intentional staged-scope review, public repository
-creation, initial push, and remote readback.
+## 2026-07-18 — Publication readback
+
+- Public repository created at `https://github.com/Mr-Span/AIdeas`.
+- GitHub readback reports `visibility: PUBLIC`, `isPrivate: false`, and default
+  branch `main`.
+- Initial remote commit:
+  `a12310fe0d4e82327ff98b3057ab11f693016ce5` (`Bootstrap AIdeas pilot`).
+- Recursive remote tree readback returned 69 paths.
+- Remote path scan found no `.env`, `.aideas`, database/SQLite, Playwright
+  report, test-results, or TypeScript build-metadata path.
+- Local `main` tracks `origin/main`.
