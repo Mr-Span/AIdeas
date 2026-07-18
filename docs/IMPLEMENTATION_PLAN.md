@@ -95,6 +95,11 @@ Status: active and the sole implementation front. Secured LAN identity and
 final purge semantics are explicit backlog; their features stay disabled and do
 not block this phase.
 
+Harness checkpoint: provider contract and Codex SDK feasibility entered `main`
+through [PR #4](https://github.com/Mr-Span/AIdeas/pull/4) at merge commit
+`ec869ff` with CI green. AI003-B durable broker/restart reconciliation is next;
+Phase 2 is not complete.
+
 Sequence:
 
 1. freeze `ExecutionProvider` contract and event schema;

@@ -68,6 +68,11 @@ ledger/restart reconciliation, worktree/process-tree supervisor, CLI recovery
 adapter, and operator-only project research route. See
 `docs/AI003_ARCHITECTURE_PACKET.md`.
 
+Integration: harness merged into `main` through
+[PR #4](https://github.com/Mr-Span/AIdeas/pull/4) at merge commit `ec869ff` after
+GitHub Actions `verify` passed. Next eligible packet: AI003-B durable Execution
+Broker ledger and restart reconciliation.
+
 Acceptance:
 
 - provider-neutral run/event/cancel/result contract;

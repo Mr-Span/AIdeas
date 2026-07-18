@@ -1,6 +1,9 @@
 # AI-003 Codex owner-local feasibility packet
 
-Status: `harness proven; integration active`, 2026-07-18. This packet freezes
+Status: `harness proven and merged; integration active`, 2026-07-18. The
+harness entered `main` through
+[PR #4](https://github.com/Mr-Span/AIdeas/pull/4) at merge commit `ec869ff` after
+clean-checkout CI passed. This packet freezes
 the first executable provider boundary. It does not mark AI-003 complete: the
 durable broker, worktree supervisor, and project research route remain next.
 

@@ -157,3 +157,19 @@
 - Final `pnpm.cmd test:e2e`: pass, 4/4 Chromium tests. The existing intake
   remains truthful: Research is blocked because no operator-only project run
   route is enabled yet.
+
+## 2026-07-18 — AI-003 harness GitHub integration
+
+- Branch `codex/ai003-codex-provider` was published without environment files,
+  secrets, databases, runtime state, client data, provider auth stores, or test
+  reports.
+- [GitHub Actions verify](https://github.com/Mr-Span/AIdeas/actions/runs/29645284521)
+  passed on harness commit `b0b30bf`.
+- [PR #4](https://github.com/Mr-Span/AIdeas/pull/4) was ready, mergeable, and
+  merged into `main` as `ec869ff04a6bab4abf6d7fb9e3973a98df8d18b5`.
+- Remote `refs/heads/main` and the local fast-forwarded `main` both read back as
+  `ec869ff`; the working tree was clean and the local-only preview returned HTTP
+  200 on `127.0.0.1:3001`.
+- AI-003 remains active. The next eligible packet is the durable Execution
+  Broker ledger and restart reconciliation; secured LAN and final purge remain
+  backlog.
