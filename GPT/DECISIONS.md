@@ -1,5 +1,17 @@
 # Decisions
 
+## 2026-07-18 — AI-003 is the sole active front
+
+The operator prioritized the Codex owner-local integration and research
+feasibility slice. Secured LAN client identity/transport and the final
+post-retention purge semantics move to explicit backlog and do not block
+AI-003. Both features remain disabled until their later evidence gates pass.
+
+Local verification found Codex authenticated through ChatGPT. The official
+TypeScript SDK is the primary server-side adapter surface; stable
+`codex exec --json` remains the fallback and diagnostic path. Experimental App
+Server transport is not part of the pilot's critical path.
+
 ## 2026-07-18 — Product and operator boundary
 
 Personal, single-operator product with optional secured client contribution.

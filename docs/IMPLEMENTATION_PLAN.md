@@ -91,18 +91,23 @@ Gate P1:
 Task: AI-003. Estimated effort: 2–4 weeks because provider behavior and Windows
 sandboxing are the highest uncertainties.
 
+Status: active and the sole implementation front. Secured LAN identity and
+final purge semantics are explicit backlog; their features stay disabled and do
+not block this phase.
+
 Sequence:
 
 1. freeze `ExecutionProvider` contract and event schema;
 2. implement the operator's Codex owner-local TypeScript SDK adapter server-side;
-3. implement structured CLI fallback only for controlled recovery;
-4. normalize start, stream, usage, interrupt, timeout, auth failure, rate limit,
+3. retain stable `codex exec --json` as a controlled fallback and diagnostic;
+4. keep experimental App Server transport outside the critical path;
+5. normalize start, stream, usage, interrupt, timeout, auth failure, rate limit,
    resume/inspect and final result;
-5. create fixture repository and worktree manager;
-6. apply path, command, network and duration capability grants;
-7. add canary-secret redaction and event/artifact filters;
-8. crash the broker/runner at each side-effect boundary and reconcile;
-9. schedule Claude API/product mode only after the common contract is stable.
+6. create fixture repository and worktree manager;
+7. apply path, command, network and duration capability grants;
+8. add canary-secret redaction and event/artifact filters;
+9. crash the broker/runner at each side-effect boundary and reconcile;
+10. schedule Claude API/product mode only after the common contract is stable.
 
 Gate P2:
 
@@ -248,8 +253,8 @@ flows are separate projects.
 
 ## Immediate next task
 
-Integrate the verified AI-002 slice, then implement AI-003: the provider-neutral
-ExecutionProvider feasibility harness with Codex owner-local first. Provider
+Implement AI-003 now: the provider-neutral ExecutionProvider feasibility
+harness with Codex owner-local first. Provider
 integration must preserve the now-stable persistence/client-projection contract;
 Research stays visibly blocked until a real provider run has started. Secured
-LAN identity and automatic purge remain separate release gates.
+LAN identity and automatic purge are explicit backlog and remain disabled.

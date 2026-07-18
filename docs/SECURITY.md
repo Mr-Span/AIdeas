@@ -25,6 +25,13 @@ provider's credential store. In API/product mode, secrets come from an OS
 credential store or approved secret manager and are injected only into the
 provider subprocess/request boundary.
 
+The Codex SDK persists resumable threads in Codex's provider-managed local
+session store. This does not copy credentials into AIdeas, but it means compiled
+prompts and provider responses follow the selected Codex/OpenAI account's data
+handling and retention. Real client material cannot enter this path until the
+operator-facing disclosure, provider-retention policy, and ephemeral-vs-resume
+decision are explicit. The feasibility suite uses synthetic content only.
+
 AIdeas documentation lists setting names and setup flows, not secret values. No
 repo-local env file is required by the current UI.
 

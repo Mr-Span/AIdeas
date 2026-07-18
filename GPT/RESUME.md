@@ -1,7 +1,7 @@
 # Resume
 
-Active task: AI-003 — the provider-neutral ExecutionProvider feasibility
-harness with Codex owner-local first.
+Active task: AI-003 — the sole current front: provider-neutral
+ExecutionProvider feasibility with Codex owner-local first.
 
 Last verified state: AI-002 is integrated into `main` through PR #2 at merge
 commit `97c3153`. SQLite revisions, content-addressed artifacts,
@@ -17,14 +17,19 @@ early-deletion semantics are confirmed.
 
 Next sequence:
 
-1. freeze the provider-neutral run/event/cancel/result contract;
-2. verify the supported Codex owner-local authentication and execution surface;
-3. implement the Codex adapter without exposing session credentials to clients;
-4. add structured events, timeout, cancellation, and fixture-worktree isolation;
-5. keep Research visibly blocked until a real provider run has started;
-6. separately decide the secured-LAN transport/session model before client-device
-   access is enabled.
+1. persist the Execution Broker run/event/provider-thread ledger in SQLite;
+2. reconcile interrupted runs and support inspect/resume proposal after restart;
+3. add the external worktree/process-tree supervisor and crash injection;
+4. implement stable `codex exec --json` recovery/diagnostic compatibility;
+5. expose an operator-only project research route after durable capture/policy;
+6. keep Research visibly blocked until that route has a real start receipt.
 
-Open before LAN/purge release: point 4 client transport and authenticated
-identity; point 5 completion warning, residual audit, backup deletion lag, and
-early deletion semantics.
+AI-003 harness evidence: the provider-neutral contract, SDK adapter, safe event
+normalization, timeout/cancel, redaction, environment allowlist, and workspace
+policy are implemented. Twelve focused tests and two real owner-local Codex
+turns pass; the real fixture remained byte-for-byte and Git clean.
+
+Explicit backlog after AI-003: point 4 client transport/authenticated identity
+and point 5 completion warning, residual audit, backup deletion lag, and early
+deletion semantics. LAN and automatic purge remain disabled; neither blocks the
+current provider harness.
