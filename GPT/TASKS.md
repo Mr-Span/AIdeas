@@ -15,7 +15,7 @@ Acceptance:
 
 ## AI-002 — SQLite durable draft slice
 
-Status: next eligible production task.
+Status: complete on `codex/ai002-durable-drafts`; awaiting GitHub integration.
 
 Ownership: `src/server/storage/**`, `src/server/artifacts/**`,
 `src/server/domain/**`, migrations, API route, contract/unit/integration tests,
@@ -35,12 +35,21 @@ Acceptance:
 - backup/restore and `integrity_check` pass;
 - SQLite file and backups remain ignored by Git;
 - no browser or LAN client opens the database file.
+- public collaboration entries persist as a two-way client/engineer thread;
+- the client projection contains only published high-level plan steps and safe
+  public messages;
+- only an evidence-bound `verified` step renders green, and client actions
+  cannot create that transition;
+- client payloads exclude prompts, raw research, provider/Git/DB/storage paths,
+  internal evidence, private notes, and provisional forge branding.
 
-Verification: `pnpm.cmd verify` plus storage integration and restart tests.
+Verification: `pnpm.cmd verify`, 18 unit/integration/contract tests, 4 Chromium
+end-to-end tests, and rendered desktop/mobile QA pass.
 
 ## AI-003 — ExecutionProvider feasibility harness
 
-Status: blocked by AI-002 contracts. Codex owner-local is confirmed first.
+Status: next after AI-002 integration. Codex owner-local is confirmed first;
+the UI truthfully keeps providers disconnected until this slice is implemented.
 
 Acceptance:
 

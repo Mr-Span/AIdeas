@@ -1,4 +1,5 @@
 import {
+  CheckCircle2,
   CircleHelp,
   Clock3,
   FileText,
@@ -9,6 +10,7 @@ import {
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 
 import type { WorkflowStage, WorkflowStatus } from "./sample-data";
 
@@ -21,16 +23,17 @@ const icons = {
 } as const;
 
 function statusLabel(status: WorkflowStatus) {
-  if (status === "active") return "În lucru";
-  if (status === "waiting") return "În așteptare";
+  if (status === "in_progress") return "În lucru";
+  if (status === "waiting_client") return "Așteaptă clientul";
   if (status === "blocked") return "Blocat";
-  return "Blocat";
+  if (status === "verified") return "Verificat";
+  return "Neînceput";
 }
 
 function statusVariant(status: WorkflowStatus) {
-  if (status === "active") return "default" as const;
+  if (status === "in_progress") return "default" as const;
   if (status === "blocked") return "destructive" as const;
-  if (status === "waiting") return "secondary" as const;
+  if (status === "waiting_client") return "secondary" as const;
   return "outline" as const;
 }
 
@@ -39,13 +42,29 @@ type WorkflowRailProps = {
 };
 
 export function WorkflowRail({ stages }: WorkflowRailProps) {
+  const verified = stages.filter((stage) => stage.status === "verified").length;
+  const progress = stages.length ? Math.round((verified / stages.length) * 100) : 0;
+
   return (
     <aside className="workflow-rail" aria-labelledby="workflow-title">
-      <h2 id="workflow-title">Fluxul proiectului</h2>
+      <div className="workflow-heading">
+        <h2 id="workflow-title">Planul proiectului</h2>
+        <span>{verified} din {stages.length} verificați</span>
+      </div>
+      <Progress
+        aria-label={`${verified} din ${stages.length} pași verificați`}
+        className="workflow-progress"
+        value={progress}
+      />
       <ol className="workflow-list">
         {stages.map((stage) => {
-          const Icon = icons[stage.id];
-          const StatusIcon = stage.status === "locked" ? LockKeyhole : null;
+          const Icon = icons[stage.kind];
+          const StatusIcon =
+            stage.status === "verified"
+              ? CheckCircle2
+              : stage.status === "not_started"
+                ? LockKeyhole
+                : null;
 
           return (
             <li className="workflow-stage" key={stage.id}>
@@ -55,7 +74,10 @@ export function WorkflowRail({ stages }: WorkflowRailProps) {
               <div className="stage-copy">
                 <div className="stage-title-line">
                   <strong>{stage.label}</strong>
-                  <Badge variant={statusVariant(stage.status)}>
+                  <Badge
+                    data-stage-status={stage.status}
+                    variant={statusVariant(stage.status)}
+                  >
                     {StatusIcon ? (
                       <StatusIcon data-icon="inline-start" aria-hidden="true" />
                     ) : null}

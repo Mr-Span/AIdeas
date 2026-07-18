@@ -1,6 +1,6 @@
 # AIdeas implementation plan
 
-Status: `v0.3 decision draft`, 2026-07-18. This document owns ordering, work packets and
+Status: `v0.4 decision draft`, 2026-07-18. This document owns ordering, work packets and
 gates. A phase is complete only when its gate is demonstrated.
 
 ## Delivery principle
@@ -46,6 +46,9 @@ Gate P0:
 
 Task: AI-002. Estimated engineering effort: 1–3 weeks.
 
+Implementation status: complete on `codex/ai002-durable-drafts`; GitHub
+integration is the remaining delivery step.
+
 Work packets:
 
 1. define Zod contracts for `CreateProject`, `AppendCapture`,
@@ -61,7 +64,11 @@ Work packets:
 7. add active/completed/grace/pinned/purge lifecycle fields and calculate the
    provisional completion-plus-30-days deadline;
 8. implement interrupted-boundary reconciliation, backup, restore, integrity,
-   and migration smoke tests.
+   and migration smoke tests;
+9. persist public client/engineer collaboration entries and build a dedicated
+   client DTO that excludes internal notes and infrastructure detail;
+10. persist high-level plan-step projections with the invariant that only an
+    evidence-bound `verified` step may render green in the mini tracker.
 
 Gate P1:
 
@@ -73,7 +80,11 @@ Gate P1:
 - completion creates a 30-day deadline and reopening cancels it;
 - database and artifacts never enter Git;
 - a limited test actor uses the same capture API but cannot open the DB or choose
-  a host filesystem path; actual LAN exposure waits for point 4.
+  a host filesystem path; actual LAN exposure waits for point 4;
+- public questions, answers and corrections round-trip while private entries do
+  not appear in the client projection;
+- the client tracker contains only published high-level plan steps, and no
+  client command can create a verified-green transition.
 
 ## Phase 2 — Provider feasibility and normalized execution
 
@@ -237,8 +248,8 @@ flows are separate projects.
 
 ## Immediate next task
 
-AI-002 is the only next eligible production task: persist one project, its
-immutable Markdown/media artifacts, manifests, captures, retention deadline,
-and approved revisions across the Artifact Store plus SQLite, then make
-save/reload survive a restart. Provider integration waits for that stable
-contract.
+Integrate the verified AI-002 slice, then implement AI-003: the provider-neutral
+ExecutionProvider feasibility harness with Codex owner-local first. Provider
+integration must preserve the now-stable persistence/client-projection contract;
+Research stays visibly blocked until a real provider run has started. Secured
+LAN identity and automatic purge remain separate release gates.

@@ -59,3 +59,38 @@
   clean-clone production-build gate.
 - Notion hub, AIdeas pilot, architecture, implementation, and reconciliation
   pages were updated and read back successfully with no stale `Urzeon` entry.
+
+## 2026-07-18 — AI-002 durable drafts and client tracking
+
+- SQLite control storage uses WAL, foreign keys, defensive mode, an explicit
+  busy timeout, immutable revisions, idempotency receipts, audit records, and
+  one service-owned writer boundary.
+- Backup now produces an immutable bundle containing a hashed SQLite snapshot,
+  manifest, and every referenced artifact. Restore is fresh-root and atomic;
+  the integration test reconstructs uploaded media and the public conversation,
+  then passes `integrity_check`.
+- Markdown/media bytes are stored by SHA-256 outside Git; SQLite stores their
+  manifests and revision links. Final targets are revalidated after atomic
+  rename or concurrent deduplication, including symbolic-link checks.
+- Public project responses expose only the allowlisted client DTO. They omit
+  prompts, raw research, internal evidence, provider/Git/database/storage
+  details, private notes, and the provisional `Faur` name.
+- Public collaboration is persisted as a two-way thread. Until transport and
+  authentication are chosen, browser-originated authors are always marked
+  `unverified`; callers cannot self-assign the client or operator role.
+- The client mini-tracker publishes five high-level steps. Only an internally
+  evidence-bound `verified` transition renders green; clients cannot mutate
+  plan status. A disconnected provider leaves Research visibly blocked and no
+  agent is claimed to have started.
+- `pnpm.cmd verify`: pass; lint, TypeScript, 4 Vitest files / 18 tests, and the
+  warning-free Next.js 16.2.10 production build all passed.
+- `pnpm.cmd test:e2e`: pass, 4/4 Chromium tests covering durable save,
+  collaboration, repeated selection of the same upload, truthful
+  submit/progress, screenshots, and mobile overflow.
+- In-app browser QA passed at 1280 px and 390 × 844: correct green/red/neutral
+  states, all five mobile stages, saved SQLite version, public message, no
+  horizontal overflow, and no framework overlay or console error.
+- The remaining LAN release gates are authenticated client/operator identity
+  and an upstream request-size cap; provider execution remains intentionally
+  disconnected. Exact purge/audit/backup behavior after the provisional 30-day
+  retention deadline remains a product decision.

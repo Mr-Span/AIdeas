@@ -1,6 +1,6 @@
 # AIdeas product specification
 
-Status: `v0.3 decision draft`, 2026-07-18. This document owns product behavior and
+Status: `v0.4 decision draft`, 2026-07-18. This document owns product behavior and
 acceptance. Technical ownership lives in `ARCHITECTURE.md`; delivery sequencing
 lives in `IMPLEMENTATION_PLAN.md`.
 
@@ -37,6 +37,23 @@ days; final client transport and purge semantics remain operator decisions.
 | AI planning roles | propose architecture, DAG, tasks, tests, risks and rollout | start execution before plan approval |
 | AI execution roles | work in isolated repository worktrees and return evidence | change the main checkout directly or self-approve evidence |
 | Policy/runtime | apply typed commands, gates, leases, approvals and receipts | infer authorization from prose alone |
+
+## Client-engineer collaboration contract
+
+The client experience is deliberately smaller than the operator experience.
+It is a two-way workspace, not a read-only status page:
+
+- the client submits intake, media, answers, corrections, and messages;
+- the operator/engineer returns public questions and publishes the plan result;
+- the client sees the plan as high-level steps with a compact progress count;
+- only evidence-verified steps are green;
+- the client does not see raw research traces, prompts, provider state, Git
+  operations, database/storage paths, internal evidence, or private engineering
+  notes.
+
+The first durable slice stores the collaboration and client-plan projection
+contracts. Authenticated LAN identity remains a later security gate; until then,
+the UI must not claim verified client identity.
 
 ## Human interaction contract
 
@@ -119,6 +136,18 @@ more repositories, source packs, policies, and approved revisions.
 - cost/effort ranges and known limitations;
 - diff between the last approved revision and the proposed one.
 
+The client projection of this surface shows only published high-level steps,
+their client-safe summary, a sanitized next action, and one of `not started`,
+`in progress`, `waiting for client`, `blocked`, or `verified`. Progress is the
+count of verified visible steps divided by all visible steps.
+
+### 4a. Client-engineer thread
+
+- public questions, answers, messages, corrections, and acknowledgements;
+- links to the relevant plan step or revision when applicable;
+- immutable history after send, with later corrections recorded as new entries;
+- internal operator/agent notes excluded from the client projection.
+
 ### 5. Execution center
 
 - work queue and dependency status;
@@ -144,6 +173,8 @@ more repositories, source packs, policies, and approved revisions.
 | F-10 | integrate repository changes | push/PR/merge use evidence and readback, with policy toggle |
 | F-11 | stop on unresolved problems | blocked state explains cause, attempted repairs and decision needed |
 | F-12 | protect high-risk actions | payments/publication/deploy always require approval |
+| F-13 | support two-way client/engineer review | public questions, answers and corrections persist without exposing internal notes |
+| F-14 | show truthful client progress | only evidence-bound verified steps render green; internal execution details remain hidden |
 
 ## Non-functional requirements
 

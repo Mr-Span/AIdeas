@@ -2,6 +2,7 @@
 
 import type { ChangeEvent, ReactNode } from "react";
 import {
+  Circle,
   CheckCircle2,
   ChevronDown,
   Clock3,
@@ -23,8 +24,17 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
 
 import type { WorkflowStage } from "./sample-data";
+
+function mobileStatusLabel(stage: WorkflowStage) {
+  if (stage.status === "verified") return "verificat";
+  if (stage.status === "in_progress") return "în lucru";
+  if (stage.status === "waiting_client") return "așteaptă clientul";
+  if (stage.status === "blocked") return "blocat";
+  return "neînceput";
+}
 
 type MobileSectionProps = {
   children: ReactNode;
@@ -60,6 +70,7 @@ function MobileSection({
 
 type MobileDetailsProps = {
   fileCount: number;
+  fileInputVersion: number;
   knownFacts: readonly string[];
   notes: string;
   onFilesSelected: (event: ChangeEvent<HTMLInputElement>) => void;
@@ -69,13 +80,17 @@ type MobileDetailsProps = {
 
 export function MobileDetails({
   fileCount,
+  fileInputVersion,
   knownFacts,
   notes,
   onFilesSelected,
   onNotesChange,
   stages,
 }: MobileDetailsProps) {
-  const researchStage = stages.find((stage) => stage.id === "research");
+  const researchStage = stages.find((stage) => stage.kind === "research");
+  const verifiedSteps = stages.filter(
+    (stage) => stage.status === "verified",
+  ).length;
 
   return (
     <div className="mobile-sections">
@@ -95,7 +110,7 @@ export function MobileDetails({
             placeholder="Gânduri, întrebări sau context pentru mai târziu..."
           />
           <FieldDescription>
-            Rămân doar în memoria acestei pagini în versiunea curentă.
+            Se salvează drept o revizie nouă când alegi Salvează sau Trimite.
           </FieldDescription>
         </Field>
       </MobileSection>
@@ -106,13 +121,15 @@ export function MobileDetails({
         summary={`${fileCount} ${fileCount === 1 ? "fișier" : "fișiere"}`}
       >
         <p className="mobile-section-summary">
-          Selectarea este locală; fișierele nu sunt încă încărcate sau salvate.
+          Fișierele selectate vor fi salvate împreună cu următoarea revizie.
         </p>
         <input
+          key={`media-mobile-${fileInputVersion}`}
           className="sr-only"
           id="media-mobile"
           multiple
           type="file"
+          accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,text/plain,text/markdown,application/json"
           onChange={onFilesSelected}
         />
         <Button asChild variant="outline">
@@ -140,19 +157,31 @@ export function MobileDetails({
 
       <MobileSection
         icon={<Clock3 aria-hidden="true" size={19} />}
-        label="Fluxul proiectului"
-        summary={
-          researchStage?.status === "blocked"
-            ? "Research blocat"
-            : "Intake în lucru"
-        }
+        label="Planul proiectului"
+        summary={`${verifiedSteps}/${stages.length} verificați`}
       >
-        <ol className="known-facts">
+        <Progress
+          aria-label={`${verifiedSteps} din ${stages.length} pași verificați`}
+          className="client-plan-progress"
+          value={stages.length ? (verifiedSteps / stages.length) * 100 : 0}
+        />
+        {researchStage?.status === "blocked" ? (
+          <p className="mobile-stage-alert">
+            Cercetarea este blocată până la conectarea providerului.
+          </p>
+        ) : null}
+        <ol className="mobile-stage-list">
           {stages.map((stage) => (
-            <li key={stage.id}>
-              <CheckCircle2 aria-hidden="true" size={16} />
+            <li data-status={stage.status} key={stage.id}>
+              {stage.status === "verified" ? (
+                <CheckCircle2 aria-hidden="true" size={17} />
+              ) : (
+                <Circle aria-hidden="true" size={17} />
+              )}
               <span>
-                <strong>{stage.label}:</strong> {stage.detail}
+                <strong>{stage.label}</strong>
+                <small>{mobileStatusLabel(stage)}</small>
+                <span>{stage.detail}</span>
               </span>
             </li>
           ))}
