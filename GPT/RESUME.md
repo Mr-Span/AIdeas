@@ -3,11 +3,16 @@
 Active task: AI-003 — the sole current front: provider-neutral
 ExecutionProvider feasibility with Codex owner-local first.
 
-Last verified state: AI-002 is integrated into `main` through PR #2 at merge
-commit `97c3153`. SQLite revisions, content-addressed artifacts,
+Last verified state: the AI-003 owner-local feasibility harness is integrated
+into `main` through PR #4 at merge commit `ec869ff`. GitHub Actions `verify`
+passed. The provider contract, hardened SDK adapter, structured read-only live
+run, real cancellation, safe event/redaction boundary, and fixture workspace
+policy pass 14 focused tests plus 2 real Codex turns. The complete local suite
+passes 32 tests, a warning-free production build, and 4 Chromium scenarios.
+
+AI-002 remains the durable base: SQLite revisions, content-addressed artifacts,
 idempotent create/save/submit, backup/recovery primitives, public two-way
-collaboration, and the client-safe five-step mini-tracker pass 18 Vitest and
-4 Chromium end-to-end tests plus a warning-free production build.
+collaboration, and the client-safe five-step mini-tracker are in `main`.
 
 Known honest boundary: providers remain disconnected and no agent is claimed to
 start. LAN access is disabled pending authenticated client/operator identity and
