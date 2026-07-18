@@ -1,0 +1,33 @@
+# Verification
+
+## 2026-07-18 — Bootstrap checks
+
+- Target path `C:\Users\claux\Documents\AIdeas` did not exist before creation.
+- The production starter was copied from
+  `Environment/templates/nextjs-saas`, excluding `.env*`, `node_modules`,
+  `.next`, reports, test results, and build metadata.
+- Template-only Neon, Sentry, Better Auth, Drizzle, and Stripe code and
+  dependencies were removed; the pilot currently has no provider credentials
+  and no persistence layer.
+- `pnpm.cmd install`: pass; lockfile supply-chain policy reported pass.
+- `pnpm.cmd lint`: pass.
+- `pnpm.cmd typecheck`: pass.
+- `pnpm.cmd test:run`: pass, 1 file / 3 unit tests.
+- `pnpm.cmd build`: pass; Next.js `16.2.10` produced the static `/` route.
+- `pnpm.cmd test:e2e`: pass, 4/4 Chromium tests including the accepted desktop
+  and mobile viewports.
+- Focused non-visual Playwright rerun: pass, 2/2 tests and no hydration warning.
+  The earlier warning appeared only while Playwright injected temporary caret
+  styles for screenshots.
+- Visual review completed against
+  `docs/design/aideas-intake-desktop-v1.png` and
+  `docs/design/aideas-intake-mobile-v1.png`.
+- No horizontal overflow was detected at `390 × 844`.
+- Repository scan found no `.env` files and no high-signal secret patterns.
+- `.gitignore` excludes environment files, local AIdeas state, SQLite files,
+  build output, coverage, Playwright reports, and TypeScript build metadata.
+- GitHub CLI `2.96.0` is authenticated as `Mr-Span`.
+- `Mr-Span/AIdeas` did not exist at preflight time.
+
+Pending: Git initialization, intentional staged-scope review, public repository
+creation, initial push, and remote readback.
