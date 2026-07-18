@@ -1,6 +1,6 @@
 # AIdeas architecture
 
-Status: `v0.3 decision draft`, 2026-07-18. This document owns technical boundaries,
+Status: `v0.4 decision draft`, 2026-07-18. This document owns technical boundaries,
 contracts and failure behavior. It implements the canonical Project Forge model
 for the AIdeas pilot without activating every future module.
 
@@ -67,6 +67,12 @@ They differ in actor permissions and provider authority, not in storage format.
   cards, Markdown, and media. It cannot access Codex, repositories, execution,
   approvals, database files, or host paths.
 
+The client also receives an allowlisted collaboration projection: public
+questions/answers and high-level plan steps. Only `verified` steps may render
+green, and that transition requires an internal evidence reference. A client
+cannot set status or verification. Raw database rows are never serialized and
+then filtered; the Control Service constructs a dedicated client DTO.
+
 Uploads enter quarantine, receive size/type checks and a digest, then move into
 the application-owned Artifact Store. SQLite records the manifest, provenance,
 links, Project Graph revision, audit, and retention state. Large media bytes are
@@ -83,6 +89,8 @@ not stored as SQLite BLOBs. The detailed lifecycle is owned by
 | workflow checkpoint and timers | Runtime FSM | timeline |
 | source code and integration history | Git | diffs, indexes and evidence previews |
 | client media and run outputs | content-addressed Artifact Store outside Git | thumbnails and downloads |
+| client-visible plan progress | Work Control plus evidence-bound plan-step state | allowlisted mini tracker |
+| client-engineer conversation | immutable collaboration entries and artifact bodies | public thread projection |
 | approvals | Approval Store bound to digest and policy version | approval inbox |
 | human knowledge | explicitly approved knowledge records | search index and Obsidian projection |
 | semantic search index | none; rebuildable | retrieval result only |
@@ -126,6 +134,12 @@ approval_requests(id, action_class, subject_digest, policy_version, status)
 artifacts(id, digest, media_type, byte_size, storage_key, retention_class,
           retention_due_at, purged_at, created_at)
 capture_artifacts(capture_id, artifact_id, purpose, original_name)
+plan_steps(id, project_id, plan_revision, position, status, client_visible,
+           client_title, client_summary, next_action, evidence_ref, verified_at)
+collaboration_entries(id, project_id, revision_id, plan_step_id, actor_kind,
+                      entry_kind, body_ref, visibility, created_at)
+idempotency_receipts(project_id, command_name, idempotency_key,
+                     request_digest, response_json, created_at)
 evidence_bundles(id, attempt_id, commit_digest, policy_version, manifest_json)
 audit_events(id, correlation_id, actor_id, kind, subject_id, payload_json)
 outbox(id, topic, payload_json, idempotency_key, delivered_at)
@@ -271,8 +285,10 @@ a Git approval.
 ```text
 POST /api/projects
 GET  /api/projects/:id
-POST /api/projects/:id/captures
-POST /api/projects/:id/submission-bundles
+PUT  /api/projects/:id/draft
+POST /api/projects/:id/submit
+GET  /api/projects/:id/collaboration
+POST /api/projects/:id/collaboration
 POST /api/projects/:id/change-sets
 POST /api/change-sets/:id/approve
 GET  /api/projects/:id/revisions/:revisionId
@@ -286,6 +302,9 @@ Requests use CSRF/origin protection, authenticated actor, Zod schemas,
 idempotency header and expected-version header where applicable. Error responses
 return stable codes and a safe human explanation, never raw provider output or
 credentials.
+
+The exact AI-002 schema, DTO allowlist, artifact protocol, recovery behavior,
+and acceptance checks are frozen in `AI002_ARCHITECTURE_PACKET.md`.
 
 ## LAN security
 

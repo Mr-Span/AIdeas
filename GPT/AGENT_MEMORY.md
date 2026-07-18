@@ -17,6 +17,11 @@
   Markdown/media bytes live in a content-addressed Artifact Store outside Git.
 - Intake modes: owner and limited client use the same capture pipeline. The
   client never opens SQLite or receives provider/repository authority.
+- Collaboration is two-way: the client contributes and responds, while the
+  engineer publishes questions and high-level plan results. Client progress is
+  a small tracker; only evidence-verified steps render green.
+- Client projections exclude prompts, raw research, provider/Git/DB/storage
+  detail, internal evidence, private notes, and provisional forge branding.
 - Retention: provisional active-project lifetime plus 30 days after explicit
   completion; point 5 still owns purge/audit/backup/early-deletion details.
 - Canonical semantics: Project Graph. Obsidian may later be a human knowledge

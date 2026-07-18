@@ -30,6 +30,15 @@ enqueue analysis after persistence and policy checks.
 Point 4 remains open: separate secured-LAN client, operator-assisted entry, or
 an importable submission bundle for the first pilot.
 
+## 2026-07-18 — Client-visible plan and two-way review
+
+The client/engineer relationship is two-way. The client can submit input,
+answer public questions, send corrections, and review the resulting plan. The
+client sees only high-level published plan steps and a compact progress tracker;
+only evidence-verified steps are green. Prompts, raw research, provider/Git/DB
+details, internal evidence, and private engineering notes remain operator-only.
+The transport and authenticated client-session mechanism remain open.
+
 ## 2026-07-18 — Retention
 
 Provisional default: retain project data while active and for 30 days after an
@@ -55,3 +64,6 @@ whose platform includes a product named `Forge`, plus the established FAUR SA.
 Therefore `Faur` is recorded as a working/internal name, not a cleared unique
 public brand. AIdeas public branding remains unchanged pending an explicit
 collision decision and formal clearance.
+
+The operator has chosen to keep `Faur` temporarily and replace it later. No
+public rebrand is authorized during AI-002.
