@@ -94,3 +94,16 @@
   and an upstream request-size cap; provider execution remains intentionally
   disconnected. Exact purge/audit/backup behavior after the provisional 30-day
   retention deadline remains a product decision.
+
+## 2026-07-18 — AI-002 GitHub integration
+
+- Branch `codex/ai002-durable-drafts` was published without environment files,
+  secrets, SQLite state, client data, build output, or test reports.
+- The first PR run exposed a clean-clone-only issue: the unanchored
+  `artifacts/` ignore rule also excluded `src/server/artifacts/`. The rule was
+  narrowed to `/artifacts/`, the source module was added, and local typecheck
+  plus 18 tests passed again.
+- [GitHub Actions verify](https://github.com/Mr-Span/AIdeas/actions/runs/29643277500)
+  passed on final branch commit `f5e2972`.
+- [PR #2](https://github.com/Mr-Span/AIdeas/pull/2) was marked ready only after
+  the check passed, then merged into `main` as `97c3153`.

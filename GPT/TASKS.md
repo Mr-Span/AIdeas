@@ -15,7 +15,8 @@ Acceptance:
 
 ## AI-002 — SQLite durable draft slice
 
-Status: complete on `codex/ai002-durable-drafts`; awaiting GitHub integration.
+Status: complete and integrated into `main` through PR #2 at merge commit
+`97c3153`.
 
 Ownership: `src/server/storage/**`, `src/server/artifacts/**`,
 `src/server/domain/**`, migrations, API route, contract/unit/integration tests,

@@ -46,8 +46,8 @@ Gate P0:
 
 Task: AI-002. Estimated engineering effort: 1–3 weeks.
 
-Implementation status: complete on `codex/ai002-durable-drafts`; GitHub
-integration is the remaining delivery step.
+Implementation status: complete and integrated into `main` through PR #2 at
+merge commit `97c3153`.
 
 Work packets:
 
