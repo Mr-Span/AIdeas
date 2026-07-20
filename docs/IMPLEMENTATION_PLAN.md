@@ -130,9 +130,10 @@ Gate P2:
 
 Task: AI-004. Estimated effort: 2–4 weeks.
 
-Status: next. The single-agent Markdown research report implemented in AI-003
-is the baseline; specialized parallel roles and typed proposal reconciliation
-are not yet implemented.
+Status: complete locally. The AI-003 baseline now feeds four specialized,
+bounded provider runs, typed evidence/proposals, deterministic reconciliation,
+operator clarification cards and an approval-bound immutable revision. See
+`AI004_ARCHITECTURE_PACKET.md`.
 
 Work packets:
 

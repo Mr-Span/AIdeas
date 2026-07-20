@@ -100,7 +100,7 @@ backup deletion lag, and early-deletion behavior are confirmed.
 
 ## AI-004 — Research and clarification round trip
 
-Status: next; AI-003's single-agent report is the executable baseline.
+Status: implemented and locally verified; publication evidence pending.
 
 Acceptance:
 
@@ -111,9 +111,17 @@ Acceptance:
   returned as typed proposals;
 - operator edits and approves a new Project Graph revision.
 
+Evidence:
+
+- `docs/AI004_ARCHITECTURE_PACKET.md` freezes the executable contract;
+- migration 4 stores research rounds and specialized role runs;
+- four bounded roles, typed evidence, deterministic reconciliation and
+  operator approval are implemented under `src/server/research`;
+- focused and full verification are recorded in `GPT/VERIFICATION.md`.
+
 ## AI-005 — Final plan and autonomous execution gate
 
-Status: pending AI-004.
+Status: next after AI-004 integration.
 
 Acceptance:
 

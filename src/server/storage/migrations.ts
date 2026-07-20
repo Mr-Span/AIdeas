@@ -202,4 +202,51 @@ export const migrations: Migration[] = [
         CHECK (provider_pid IS NULL OR provider_pid > 0);
     `,
   },
+  {
+    version: 4,
+    sql: `
+      CREATE TABLE research_rounds (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE RESTRICT,
+        revision_id TEXT NOT NULL REFERENCES project_revisions(id) ON DELETE RESTRICT,
+        status TEXT NOT NULL CHECK (
+          status IN ('running', 'waiting_operator', 'approved', 'blocked', 'failed')
+        ),
+        result_json TEXT,
+        responses_json TEXT,
+        approved_revision_id TEXT REFERENCES project_revisions(id) ON DELETE RESTRICT,
+        error_detail TEXT,
+        created_at TEXT NOT NULL,
+        completed_at TEXT,
+        updated_at TEXT NOT NULL
+      ) STRICT;
+
+      CREATE TABLE research_role_runs (
+        id TEXT PRIMARY KEY,
+        round_id TEXT NOT NULL REFERENCES research_rounds(id) ON DELETE RESTRICT,
+        role TEXT NOT NULL CHECK (
+          role IN ('intent_analyst', 'market_researcher', 'product_validator', 'media_strategist')
+        ),
+        provider_kind TEXT NOT NULL CHECK (provider_kind IN ('codex_sdk', 'codex_cli')),
+        provider_run_id TEXT,
+        workspace_path TEXT,
+        status TEXT NOT NULL CHECK (
+          status IN ('queued', 'running', 'completed', 'blocked', 'failed')
+        ),
+        output_artifact_digest TEXT REFERENCES artifacts(digest),
+        error_code TEXT,
+        error_detail TEXT,
+        created_at TEXT NOT NULL,
+        started_at TEXT,
+        completed_at TEXT,
+        updated_at TEXT NOT NULL,
+        UNIQUE(round_id, role)
+      ) STRICT;
+
+      CREATE INDEX research_rounds_project_updated
+        ON research_rounds(project_id, updated_at DESC);
+      CREATE INDEX research_role_runs_round_role
+        ON research_role_runs(round_id, role);
+    `,
+  },
 ];

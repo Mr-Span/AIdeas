@@ -53,4 +53,27 @@ describe("Codex CLI compatibility boundary", () => {
     expect(args).toContain('web_search="disabled"');
     expect(args).not.toContain("--dangerously-bypass-approvals-and-sandbox");
   });
+
+  it("passes a server-owned output schema to Codex CLI", () => {
+    const schemaPath = "C:\\synthetic-worktree\\.aideas-output-schema.json";
+    const args = buildCodexCliArguments(
+      {
+        runId: "00000000-0000-4000-8000-000000000044",
+        workspacePath: "C:\\synthetic-worktree",
+        prompt: "Return typed output.",
+        outputSchema: { type: "object" },
+        timeoutMs: 30_000,
+        capabilityGrant: {
+          sandboxMode: "read-only",
+          networkAccess: false,
+          webSearch: "disabled",
+          approvalPolicy: "never",
+        },
+      },
+      undefined,
+      schemaPath,
+    );
+    expect(args).toContain("--output-schema");
+    expect(args).toContain(schemaPath);
+  });
 });

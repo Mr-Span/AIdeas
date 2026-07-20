@@ -11,3 +11,5 @@
 | R-007 | Autonomous merge accepts stale evidence | regression in main | evidence bound to base commit and diff digest; revalidate after base advances |
 | R-008 | Scope expands before the core loop works | long delay and operating burden | AIdeas vertical first; gate new contexts on measured benefit |
 | R-009 | Working forge name collides with a mark or domain | forced rebrand | no public umbrella branding until clearance and operator approval |
+| R-010 | A partially completed multi-role round is resumed with inconsistent context after restart | contradictory or stale proposals | mark interrupted roles/round failed, preserve artifacts, require a new explicit round; decide partial retry policy before unattended operation |
+| R-011 | Simultaneous operator API bootstrap requests rotate the local session cookie | valid operator is rejected or a mutation appears stuck | share one in-flight session promise in the browser; contract and Chromium regression coverage |

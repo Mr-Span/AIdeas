@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readdirSync, statSync } from "node:fs";
+import { readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 import { join } from "node:path";
 
@@ -153,6 +153,7 @@ function toolLifecycle(type: string, item: Record<string, unknown>) {
 export function buildCodexCliArguments(
   input: ExecutionStart | ExecutionResume,
   providerRunId?: string,
+  outputSchemaPath?: string,
 ) {
   if (providerRunId) {
     return [
@@ -172,6 +173,7 @@ export function buildCodexCliArguments(
       `web_search="${input.capabilityGrant.webSearch}"`,
       "-c",
       "features.hooks=false",
+      ...(outputSchemaPath ? ["--output-schema", outputSchemaPath] : []),
       providerRunId,
       "-",
     ];
@@ -196,6 +198,7 @@ export function buildCodexCliArguments(
     `web_search="${input.capabilityGrant.webSearch}"`,
     "-c",
     "features.hooks=false",
+    ...(outputSchemaPath ? ["--output-schema", outputSchemaPath] : []),
     "-",
   ];
 }
@@ -302,9 +305,22 @@ export class CodexCliProvider implements ExecutionProvider {
     }
 
     const request = { ...input, workspacePath: workspace };
+    const outputSchemaPath = input.outputSchema
+      ? join(workspace, ".aideas-output-schema.json")
+      : undefined;
+    if (outputSchemaPath) {
+      writeFileSync(outputSchemaPath, JSON.stringify(input.outputSchema), {
+        encoding: "utf8",
+        flag: "wx",
+      });
+    }
     const managed = this.processFactory({
       command: this.command,
-      args: buildCodexCliArguments(request, resumeProviderRunId),
+      args: buildCodexCliArguments(
+        request,
+        resumeProviderRunId,
+        outputSchemaPath,
+      ),
       cwd: workspace,
       env: buildCodexEnvironment() as NodeJS.ProcessEnv,
     });
@@ -440,6 +456,7 @@ export class CodexCliProvider implements ExecutionProvider {
         await this.terminateTree(managed.child);
       }
       this.activeRuns.delete(input.runId);
+      if (outputSchemaPath) rmSync(outputSchemaPath, { force: true });
     }
   }
 

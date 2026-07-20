@@ -6,6 +6,10 @@ import type {
 } from "@/server/domain/contracts";
 import type { ClarificationAnswers } from "@/domain/intake-questions";
 import type { ResearchStateDto } from "@/server/execution/broker";
+import type {
+  ResearchApprovalResponses,
+  ResearchRoundStateDto,
+} from "@/server/research/contracts";
 
 type ApiErrorPayload = {
   error?: { code?: string; message?: string };
@@ -23,16 +27,24 @@ export class ProjectApiError extends Error {
 }
 
 let operatorToken: string | null = null;
+let operatorTokenRequest: Promise<string> | null = null;
 
 async function getOperatorToken() {
   if (operatorToken) return operatorToken;
-  const response = await fetch("/api/operator/session", {
+  operatorTokenRequest ??= fetch("/api/operator/session", {
     cache: "no-store",
     credentials: "same-origin",
-  });
-  const payload = await responseJson<{ csrfToken: string }>(response);
-  operatorToken = payload.csrfToken;
-  return operatorToken;
+  })
+    .then((response) => responseJson<{ csrfToken: string }>(response))
+    .then((payload) => {
+      operatorToken = payload.csrfToken;
+      return operatorToken;
+    })
+    .catch((error) => {
+      operatorTokenRequest = null;
+      throw error;
+    });
+  return operatorTokenRequest;
 }
 
 async function operatorHeaders() {
@@ -183,6 +195,57 @@ export async function cancelResearch(input: {
     },
   );
   return responseJson<ResearchStateDto>(response);
+}
+
+export async function loadResearchRoundState(projectId: string) {
+  const response = await fetch(`/api/projects/${projectId}/research-round`, {
+    cache: "no-store",
+    credentials: "same-origin",
+    headers: { "X-AIdeas-Operator-Token": await getOperatorToken() },
+  });
+  return responseJson<ResearchRoundStateDto>(response);
+}
+
+export async function startResearchRound(input: {
+  projectId: string;
+  expectedVersion: number;
+  revisionId: string;
+  idempotencyKey: string;
+}) {
+  const response = await fetch(`/api/projects/${input.projectId}/research-round`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: await operatorHeaders(),
+    body: JSON.stringify({
+      expectedVersion: input.expectedVersion,
+      revisionId: input.revisionId,
+      idempotencyKey: input.idempotencyKey,
+    }),
+  });
+  return responseJson<ResearchRoundStateDto>(response);
+}
+
+export async function approveResearchRound(input: {
+  projectId: string;
+  roundId: string;
+  expectedVersion: number;
+  idempotencyKey: string;
+  responses: ResearchApprovalResponses;
+}) {
+  const response = await fetch(
+    `/api/projects/${input.projectId}/research-round/${input.roundId}/approve`,
+    {
+      method: "POST",
+      credentials: "same-origin",
+      headers: await operatorHeaders(),
+      body: JSON.stringify({
+        expectedVersion: input.expectedVersion,
+        idempotencyKey: input.idempotencyKey,
+        responses: input.responses,
+      }),
+    },
+  );
+  return responseJson<ResearchRoundStateDto & { project: ClientProjectDto }>(response);
 }
 
 export async function appendOperatorMessage(input: {

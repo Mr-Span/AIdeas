@@ -148,6 +148,22 @@ export type SubmitProjectResult = {
   replayed: boolean;
 };
 
+export type ApproveResearchRevisionInput = {
+  projectId: string;
+  expectedVersion: number;
+  roundId: string;
+  idempotencyKey: string;
+  responses: Record<string, { selectedOption?: string; answer?: string }>;
+  resolutionMarkdown: string;
+};
+
+export type ApproveResearchRevisionResult = {
+  project: ClientProjectDto;
+  revisionId: string;
+  version: number;
+  replayed: boolean;
+};
+
 export type AppendCollaborationResult = {
   entry: ClientCollaborationEntryDto;
   replayed: boolean;

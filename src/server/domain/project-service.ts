@@ -14,6 +14,8 @@ import {
   saveDraftInputSchema,
   submitProjectInputSchema,
   type ActorKind,
+  type ApproveResearchRevisionInput,
+  type ApproveResearchRevisionResult,
   type AppendCollaborationResult,
   type ClientCollaborationEntryDto,
   type ClientPlanStepDto,
@@ -45,6 +47,11 @@ type DraftPayload = {
   notes: string;
   approvalRequired: boolean;
   submitted: boolean;
+  researchApprovals?: Array<{
+    roundId: string;
+    approvedAt: string;
+    responses: Record<string, { selectedOption?: string; answer?: string }>;
+  }>;
 };
 
 type ReceiptRow = {
@@ -125,6 +132,7 @@ function buildCaptureMarkdown(input: {
   notes: string;
   approvalRequired: boolean;
   submitted: boolean;
+  researchApprovals?: DraftPayload["researchApprovals"];
 }) {
   const clarificationMarkdown = intakeQuestions
     .map(
@@ -132,7 +140,18 @@ function buildCaptureMarkdown(input: {
         `### ${index + 1}. ${question.title}\n\n${input.clarifications[question.id]?.trim() || "_Fără răspuns_"}`,
     )
     .join("\n\n");
-  return `# ${input.displayName}\n\n## Idee\n\n${input.idea}\n\n## Clarificări\n\n${clarificationMarkdown}\n\n## Notițe\n\n${input.notes}\n\n## Control\n\n- Aprobare umană Git: ${input.approvalRequired ? "da" : "nu"}\n- Trimis pentru analiză: ${input.submitted ? "da" : "nu"}\n`;
+  const researchMarkdown = (input.researchApprovals ?? [])
+    .map((approval) => {
+      const answers = Object.entries(approval.responses)
+        .map(
+          ([cardId, response]) =>
+            `- ${cardId}: ${response.selectedOption ?? response.answer ?? "_Fără răspuns_"}`,
+        )
+        .join("\n");
+      return `### Runda ${approval.roundId}\n\nAprobată la ${approval.approvedAt}.\n\n${answers}`;
+    })
+    .join("\n\n");
+  return `# ${input.displayName}\n\n## Idee\n\n${input.idea}\n\n## Clarificări\n\n${clarificationMarkdown}\n\n## Notițe\n\n${input.notes}\n\n## Decizii din cercetare\n\n${researchMarkdown || "_Nicio rundă aprobată_"}\n\n## Control\n\n- Aprobare umană Git: ${input.approvalRequired ? "da" : "nu"}\n- Trimis pentru analiză: ${input.submitted ? "da" : "nu"}\n`;
 }
 
 export class ProjectService {
@@ -693,6 +712,174 @@ export class ProjectService {
         revisionId,
         version: nextVersion,
         providerStarted: false,
+        replayed: false,
+      };
+      this.recordReceipt(
+        input.projectId,
+        commandName,
+        input.idempotencyKey,
+        requestDigest,
+        response,
+        createdAt,
+      );
+      return response;
+    });
+  }
+
+  approveResearchRevision(
+    input: ApproveResearchRevisionInput,
+  ): ApproveResearchRevisionResult {
+    const commandName = "approve_research_revision";
+    const requestDigest = sha256(
+      stableJson({
+        expectedVersion: input.expectedVersion,
+        roundId: input.roundId,
+        responses: input.responses,
+        resolutionMarkdown: input.resolutionMarkdown,
+      }),
+    );
+    const existing = this.getReceipt<ApproveResearchRevisionResult>(
+      input.projectId,
+      commandName,
+      input.idempotencyKey,
+      requestDigest,
+    );
+    if (existing) return { ...existing, replayed: true };
+
+    const createdAt = this.now();
+    const revisionId = this.idFactory();
+    const nextVersion = input.expectedVersion + 1;
+    return this.store.transaction(() => {
+      const replay = this.getReceipt<ApproveResearchRevisionResult>(
+        input.projectId,
+        commandName,
+        input.idempotencyKey,
+        requestDigest,
+      );
+      if (replay) return { ...replay, replayed: true };
+
+      const project = this.requireVersion(input.projectId, input.expectedVersion);
+      const currentRevisionId = nullableText(project, "current_revision_id");
+      if (!currentRevisionId) {
+        throw new DomainError("VALIDATION_ERROR", "Revizia curentă lipsește.", 409);
+      }
+      const currentRevision = this.store.database
+        .prepare("SELECT payload_json FROM project_revisions WHERE id = ?")
+        .get(currentRevisionId) as Record<string, unknown> | undefined;
+      if (!currentRevision) {
+        throw new DomainError("NOT_FOUND", "Revizia curentă nu există.", 404);
+      }
+      const currentPayload = JSON.parse(
+        text(currentRevision, "payload_json"),
+      ) as DraftPayload;
+      const payload: DraftPayload = {
+        ...currentPayload,
+        submitted: true,
+        researchApprovals: [
+          ...(currentPayload.researchApprovals ?? []).filter(
+            (candidate) => candidate.roundId !== input.roundId,
+          ),
+          {
+            roundId: input.roundId,
+            approvedAt: createdAt,
+            responses: input.responses,
+          },
+        ],
+      };
+      const capture = this.store.artifacts.put({
+        bytes: encoder.encode(
+          `${buildCaptureMarkdown({
+            displayName: text(project, "display_name"),
+            ...payload,
+          })}\n${input.resolutionMarkdown}\n`,
+        ),
+        displayName: "capture.md",
+        mediaType: "text/markdown",
+      });
+      this.insertArtifact(capture, createdAt);
+      this.store.database
+        .prepare(
+          `INSERT INTO project_revisions(
+             id, project_id, version, capture_artifact_digest, actor_kind,
+             submitted, payload_json, created_at
+           ) VALUES (?, ?, ?, ?, 'operator', 1, ?, ?)`,
+        )
+        .run(
+          revisionId,
+          input.projectId,
+          nextVersion,
+          capture.digest,
+          stableJson(payload),
+          createdAt,
+        );
+      this.store.database
+        .prepare(
+          `INSERT INTO revision_artifacts(
+             revision_id, artifact_digest, purpose, position, display_name
+           ) VALUES (?, ?, 'capture', 0, 'capture.md')`,
+        )
+        .run(revisionId, capture.digest);
+      this.store.database
+        .prepare(
+          `INSERT INTO revision_artifacts(
+             revision_id, artifact_digest, purpose, position, display_name
+           )
+           SELECT ?, artifact_digest, purpose, position, display_name
+           FROM revision_artifacts
+           WHERE revision_id = ? AND purpose = 'media'`,
+        )
+        .run(revisionId, currentRevisionId);
+      this.store.database
+        .prepare(
+          `INSERT INTO capture_events(
+             id, project_id, revision_id, actor_kind, event_kind,
+             artifact_digest, provenance_json, created_at
+           ) VALUES (?, ?, ?, 'operator', 'submitted', ?, ?, ?)`,
+        )
+        .run(
+          this.idFactory(),
+          input.projectId,
+          revisionId,
+          capture.digest,
+          stableJson({ source: "research_approval", roundId: input.roundId }),
+          createdAt,
+        );
+      this.store.database
+        .prepare(
+          `UPDATE projects
+           SET current_version = ?, current_revision_id = ?, updated_at = ?
+           WHERE id = ?`,
+        )
+        .run(nextVersion, revisionId, createdAt, input.projectId);
+      this.store.database
+        .prepare(
+          `UPDATE plan_steps
+           SET status = 'verified', evidence_ref = ?, verified_at = ?,
+               next_action = NULL, updated_at = ?
+           WHERE project_id = ? AND position = 2`,
+        )
+        .run(`revision:${revisionId}`, createdAt, createdAt, input.projectId);
+      this.store.database
+        .prepare(
+          `UPDATE plan_steps
+           SET status = 'not_started',
+               next_action = 'Planul tehnic poate fi generat din revizia aprobată.',
+               evidence_ref = NULL, verified_at = NULL, updated_at = ?
+           WHERE project_id = ? AND position = 3`,
+        )
+        .run(createdAt, input.projectId);
+      this.audit({
+        projectId: input.projectId,
+        actorKind: "operator",
+        eventKind: "research_round_approved",
+        subjectId: input.roundId,
+        payload: { revisionId, version: nextVersion },
+        createdAt,
+      });
+      const response: ApproveResearchRevisionResult = {
+        project: this.getClientProjection(input.projectId),
+        revisionId,
+        version: nextVersion,
         replayed: false,
       };
       this.recordReceipt(
