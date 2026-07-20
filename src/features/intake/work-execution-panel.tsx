@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, CircleAlert, GitCommit, LoaderCircle, LockKeyhole } from "lucide-react";
+import { CheckCircle2, CircleAlert, Download, GitCommit, LoaderCircle, LockKeyhole } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { ClientProjectDto } from "@/server/domain/contracts";
 import type { WorkControlStateDto } from "@/server/work/contracts";
 import type { IntegrationStateDto } from "@/server/integration/integration-service";
 
-import { approveWorkItemAction, executeWorkItem, integrateWorkItem, loadIntegration, loadProject, loadWorkItems } from "./project-api";
+import { approveWorkItemAction, downloadEvidenceBundle, executeWorkItem, integrateWorkItem, loadIntegration, loadProject, loadWorkItems } from "./project-api";
 
 function localKey(workItemId: string, fingerprint: string) {
   const storageKey = `aideas.pending.execute.${workItemId}.v1`;
@@ -30,6 +30,7 @@ export function WorkExecutionPanel({ project, onProjectChange }: Props) {
   const [state, setState] = useState<WorkControlStateDto>({ planId: null, planDigest: null, policyVersion: null, workItems: [] });
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [exporting, setExporting] = useState<string | null>(null);
   const [integrations, setIntegrations] = useState<Record<string, IntegrationStateDto | null>>({});
   const active = useMemo(() => state.workItems.some((item) => ["running", "verifying"].includes(item.status)), [state.workItems]);
 
@@ -138,6 +139,27 @@ export function WorkExecutionPanel({ project, onProjectChange }: Props) {
     }
   }
 
+  async function handleEvidenceExport(workItemId: string, format: "json" | "markdown") {
+    const exportKey = `${workItemId}:${format}`;
+    setExporting(exportKey);
+    setError("");
+    try {
+      const artifact = await downloadEvidenceBundle(project.id, workItemId, format);
+      const url = window.URL.createObjectURL(artifact.blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = artifact.filename;
+      document.body.append(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => window.URL.revokeObjectURL(url), 0);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "EvidenceBundle nu a putut fi exportat.");
+    } finally {
+      setExporting(null);
+    }
+  }
+
   if (!state.planId) return null;
   return (
     <section className="work-execution" aria-labelledby="work-execution-title">
@@ -157,7 +179,17 @@ export function WorkExecutionPanel({ project, onProjectChange }: Props) {
             {item.dependencies.length ? <small>Depinde de: {item.dependencies.map((dependency) => `${dependency.canonicalKey} (${dependency.status})`).join(", ")}</small> : <small>Fără dependențe; poate porni primul.</small>}
             {item.latestAttempt?.errorDetail ? <div className="work-error">{item.latestAttempt.errorDetail}</div> : null}
             {item.evidence ? (
-              <details className="evidence-receipt"><summary>EvidenceBundle · {item.evidence.commitDigest?.slice(0, 8)}</summary><ul>{item.evidence.checks.map((check, index) => <li key={`${check.kind}-${index}`}><span>{check.kind}</span><strong>{check.status}</strong></li>)}</ul><code>{item.evidence.diffDigest}</code></details>
+              <div className="evidence-block">
+                <details className="evidence-receipt"><summary>EvidenceBundle · {item.evidence.commitDigest?.slice(0, 8)}</summary><ul>{item.evidence.checks.map((check, index) => <li key={`${check.kind}-${index}`}><span>{check.kind}</span><strong>{check.status}</strong></li>)}</ul><code>{item.evidence.diffDigest}</code></details>
+                <div className="evidence-export-actions" aria-label={`Export EvidenceBundle pentru ${item.canonicalKey}`}>
+                  <Button disabled={Boolean(exporting)} size="sm" variant="outline" onClick={() => handleEvidenceExport(item.id, "markdown")}>
+                    <Download aria-hidden="true" />{exporting === `${item.id}:markdown` ? "Se exportă..." : "Markdown"}
+                  </Button>
+                  <Button disabled={Boolean(exporting)} size="sm" variant="outline" onClick={() => handleEvidenceExport(item.id, "json")}>
+                    <Download aria-hidden="true" />{exporting === `${item.id}:json` ? "Se exportă..." : "JSON"}
+                  </Button>
+                </div>
+              </div>
             ) : null}
             {integrations[item.id] ? (
               <div className="integration-receipt" data-status={integrations[item.id]?.status}>

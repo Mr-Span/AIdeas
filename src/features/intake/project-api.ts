@@ -13,6 +13,7 @@ import type {
 import type { ImplementationPlanStateDto } from "@/server/planning/contracts";
 import type { WorkControlStateDto } from "@/server/work/contracts";
 import type { IntegrationStateDto } from "@/server/integration/integration-service";
+import type { EvidenceExportFormat } from "@/server/evidence/evidence-export-service";
 
 type ApiErrorPayload = {
   error?: { code?: string; message?: string };
@@ -343,6 +344,28 @@ export async function approveWorkItemAction(input: { projectId: string; workItem
     body: JSON.stringify({ actionKind: input.actionKind, target: input.target }),
   });
   return responseJson<{ allowed: boolean; requiresApproval: boolean; reasons: string[] }>(response);
+}
+
+export async function downloadEvidenceBundle(
+  projectId: string,
+  workItemId: string,
+  format: EvidenceExportFormat,
+) {
+  const response = await fetch(
+    `/api/projects/${projectId}/work-items/${workItemId}/evidence?format=${format}`,
+    {
+      cache: "no-store",
+      credentials: "same-origin",
+      headers: { "X-AIdeas-Operator-Token": await getOperatorToken() },
+    },
+  );
+  if (!response.ok) {
+    await responseJson<never>(response);
+  }
+  const disposition = response.headers.get("content-disposition") ?? "";
+  const filename = disposition.match(/filename="([^"]+)"/u)?.[1]
+    ?? `aideas-evidence.${format === "markdown" ? "md" : "json"}`;
+  return { blob: await response.blob(), filename };
 }
 
 export async function appendOperatorMessage(input: {

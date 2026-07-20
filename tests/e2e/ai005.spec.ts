@@ -62,3 +62,79 @@ test("renders the architecture map and approves the digest-bound plan", async ({
   await page.getByRole("button", { name: "Aprobă planul final" }).click();
   await expect(page.getByText("Aprobat pentru task packets")).toBeVisible();
 });
+
+test("downloads a verified EvidenceBundle as Markdown and JSON", async ({ page }) => {
+  const verifiedProject = {
+    ...project,
+    plan: {
+      ...project.plan,
+      verifiedSteps: 4,
+      progressPercent: 80,
+      steps: project.plan.steps.map((step, index) => ({
+        ...step,
+        status: index < 4 ? "verified" : "not_started",
+        verifiedAt: index < 4 ? project.updatedAt : null,
+      })),
+    },
+  };
+  const workItemId = "71000000-0000-4000-8000-000000000004";
+  const evidence = {
+    id: "71000000-0000-4000-8000-000000000005",
+    projectId,
+    workItemId,
+    revisionId,
+    planId,
+    planDigest: "a".repeat(64),
+    policyVersion: "aideas-policy-v1",
+    baseCommit: "b".repeat(40),
+    currentBaseCommit: "b".repeat(40),
+    diffDigest: "c".repeat(64),
+    commitDigest: "d".repeat(40),
+    secretScanPassed: true,
+    checks: [{ kind: "test", status: "passed", receipt: "68 tests passed" }],
+    createdAt: project.updatedAt,
+  };
+
+  await page.addInitScript((id) => window.localStorage.setItem("aideas.project-pointer.v1", id), projectId);
+  await page.route("**/api/operator/session", (route) => route.fulfill({ json: { csrfToken: "synthetic-token" } }));
+  await page.route(`**/api/projects/${projectId}/research`, (route) => route.fulfill({ json: { project: verifiedProject, providerHealth: { provider: "codex", status: "ready", version: "fixture", authMode: "chatgpt", detail: "ready" }, activeRun: null, latestRun: null } }));
+  await page.route(`**/api/projects/${projectId}/research-round`, (route) => route.fulfill({ json: { latestRound: { id: "73000000-0000-4000-8000-000000000001", revisionId, status: "approved", roles: [], proposals: [], cards: [], roleSummaries: {}, approvedRevisionId: revisionId, errorDetail: null, createdAt: project.updatedAt, updatedAt: project.updatedAt } } }));
+  await page.route(`**/api/projects/${projectId}/implementation-plan`, (route) => route.fulfill({ json: { latestPlan: { ...plan.latestPlan, status: "approved", approvedAt: project.updatedAt } } }));
+  await page.route(`**/api/projects/${projectId}/work-items`, (route) => route.fulfill({ json: {
+    planId, planDigest: "a".repeat(64), policyVersion: "aideas-policy-v1",
+    workItems: [{
+      id: workItemId, canonicalKey: "TASK-EXPORT", title: "Exportă EvidenceBundle", status: "verified",
+      packet: { ...plan.latestPlan.plan.tasks[0], id: "TASK-EXPORT", title: "Exportă EvidenceBundle", objective: "Descarcă dovada sigură." },
+      dependencies: [], latestAttempt: null, evidence,
+    }],
+  } }));
+  await page.route(`**/api/projects/${projectId}/work-items/${workItemId}/integrate`, (route) => route.fulfill({ json: { integration: null } }));
+  await page.route(`**/api/projects/${projectId}/work-items/${workItemId}/evidence?format=*`, async (route) => {
+    const format = new URL(route.request().url()).searchParams.get("format");
+    const markdown = "# EvidenceBundle · TASK-EXPORT\n\nSafe export\n";
+    const json = JSON.stringify({ schemaVersion: "aideas-evidence-export-v1", task: { canonicalKey: "TASK-EXPORT" } });
+    await route.fulfill({
+      status: 200,
+      headers: {
+        "content-type": format === "markdown" ? "text/markdown; charset=utf-8" : "application/json; charset=utf-8",
+        "content-disposition": `attachment; filename="aideas-task-export-evidence.${format === "markdown" ? "md" : "json"}"`,
+      },
+      body: format === "markdown" ? markdown : json,
+    });
+  });
+  await page.route(`**/api/projects/${projectId}`, (route) => route.fulfill({ json: { project: verifiedProject } }));
+
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Exportă EvidenceBundle" })).toBeVisible();
+  const exportActions = page.getByLabel("Export EvidenceBundle pentru TASK-EXPORT");
+
+  const markdownDownloadPromise = page.waitForEvent("download");
+  await exportActions.getByRole("button", { name: "Markdown" }).click();
+  const markdownDownload = await markdownDownloadPromise;
+  expect(markdownDownload.suggestedFilename()).toBe("aideas-task-export-evidence.md");
+
+  const jsonDownloadPromise = page.waitForEvent("download");
+  await exportActions.getByRole("button", { name: "JSON" }).click();
+  const jsonDownload = await jsonDownloadPromise;
+  expect(jsonDownload.suggestedFilename()).toBe("aideas-task-export-evidence.json");
+});
