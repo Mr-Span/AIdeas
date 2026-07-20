@@ -1,5 +1,47 @@
 # Verification
 
+## 2026-07-20 — AI-003 broker, CLI and research loop
+
+- Added SQLite migrations for execution runs, normalized events, provider
+  threads, and terminal receipts; start is idempotent and interrupted active
+  runs reconcile through provider inspection into a terminal or explicit
+  `resume_available` state.
+- Added guarded external Git worktrees, protected-main before/after proof,
+  Windows descendant-process termination, bounded/redacted JSONL event parsing,
+  and a CLI compatibility gate validated for host `codex-cli
+  0.145.0-alpha.18`.
+- CLI process IDs are persisted before thread start. Restart reconciliation
+  verifies the OS process name/command marker and terminates the exact stale
+  Codex process tree before offering explicit resume; an unverifiable process
+  fails closed. Resume is protected by a transactional status CAS and an
+  idempotency receipt, and uses a constant server-owned continuation prompt.
+- Added a loopback-only operator session plus CSRF token. Research routes accept
+  only project/revision/version/idempotency identifiers; client-supplied prompts,
+  paths, provider selection, and capability grants are rejected by contract.
+- `dev` and `start` bind to `127.0.0.1` by default. LAN exposure is not part of
+  this gate and remains disabled until BL-001 supplies real transport identity.
+- A submitted revision can now start research, poll durable progress, resume or
+  cancel, persist the final Markdown report through the Artifact Store, and
+  render the result in the operator UI. A step becomes green only after a real
+  completed receipt.
+- `pnpm.cmd verify`: pass — lint, generated route types, strict TypeScript, 13
+  test files / 48 tests, and production build.
+- `pnpm.cmd exec playwright test tests/e2e/intake.spec.ts`: pass — 2/2 Chromium
+  desktop/mobile flows with a fresh temporary data root.
+- Focused live CLI test: pass in 21.94s using the existing ChatGPT login against
+  a synthetic read-only Git repository. It emitted a started and completed
+  receipt, did not disclose the canary, and did not alter Git status or the
+  fixture README digest.
+- Live durable-broker test: pass in 66.00s. A synthetic eight-answer revision
+  traversed capture, submit, external worktree, real Codex CLI, normalized
+  events, Artifact Store persistence, terminal receipt, and the evidence-gated
+  Research transition to `verified`.
+- No real client content was used by live verification. `.env`, credentials,
+  provider stores, SQLite data, worktrees, and test reports remain outside Git.
+- Public branch `codex/ai003-broker-cli-research` was pushed at commit
+  `474f515`; [PR #7](https://github.com/Mr-Span/AIdeas/pull/7) passed the
+  clean-checkout [GitHub Actions verify](https://github.com/Mr-Span/AIdeas/actions/runs/29752905964).
+
 ## 2026-07-20 — Eight-question intake
 
 - Replaced the hardcoded `4 din 8` prototype with eight navigable clarification

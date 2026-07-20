@@ -5,6 +5,7 @@ import type {
   SubmitProjectResult,
 } from "@/server/domain/contracts";
 import type { ClarificationAnswers } from "@/domain/intake-questions";
+import type { ResearchStateDto } from "@/server/execution/broker";
 
 type ApiErrorPayload = {
   error?: { code?: string; message?: string };
@@ -19,6 +20,26 @@ export class ProjectApiError extends Error {
     super(message);
     this.name = "ProjectApiError";
   }
+}
+
+let operatorToken: string | null = null;
+
+async function getOperatorToken() {
+  if (operatorToken) return operatorToken;
+  const response = await fetch("/api/operator/session", {
+    cache: "no-store",
+    credentials: "same-origin",
+  });
+  const payload = await responseJson<{ csrfToken: string }>(response);
+  operatorToken = payload.csrfToken;
+  return operatorToken;
+}
+
+async function operatorHeaders() {
+  return {
+    "Content-Type": "application/json",
+    "X-AIdeas-Operator-Token": await getOperatorToken(),
+  };
 }
 
 async function responseJson<T>(response: Response): Promise<T> {
@@ -101,6 +122,67 @@ export async function submitProject(input: {
     }),
   });
   return responseJson<SubmitProjectResult>(response);
+}
+
+export async function loadResearchState(projectId: string) {
+  const response = await fetch(`/api/projects/${projectId}/research`, {
+    cache: "no-store",
+    credentials: "same-origin",
+    headers: { "X-AIdeas-Operator-Token": await getOperatorToken() },
+  });
+  return responseJson<ResearchStateDto>(response);
+}
+
+export async function startResearch(input: {
+  projectId: string;
+  expectedVersion: number;
+  revisionId: string;
+  idempotencyKey: string;
+}) {
+  const response = await fetch(`/api/projects/${input.projectId}/research`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: await operatorHeaders(),
+    body: JSON.stringify({
+      expectedVersion: input.expectedVersion,
+      revisionId: input.revisionId,
+      idempotencyKey: input.idempotencyKey,
+    }),
+  });
+  return responseJson<ResearchStateDto>(response);
+}
+
+export async function resumeResearch(input: {
+  projectId: string;
+  runId: string;
+  idempotencyKey: string;
+}) {
+  const response = await fetch(
+    `/api/projects/${input.projectId}/research/${input.runId}/resume`,
+    {
+      method: "POST",
+      credentials: "same-origin",
+      headers: await operatorHeaders(),
+      body: JSON.stringify({ idempotencyKey: input.idempotencyKey }),
+    },
+  );
+  return responseJson<ResearchStateDto>(response);
+}
+
+export async function cancelResearch(input: {
+  projectId: string;
+  runId: string;
+}) {
+  const response = await fetch(
+    `/api/projects/${input.projectId}/research/${input.runId}/cancel`,
+    {
+      method: "POST",
+      credentials: "same-origin",
+      headers: await operatorHeaders(),
+      body: "{}",
+    },
+  );
+  return responseJson<ResearchStateDto>(response);
 }
 
 export async function appendOperatorMessage(input: {

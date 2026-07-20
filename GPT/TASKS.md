@@ -49,8 +49,8 @@ end-to-end tests, and rendered desktop/mobile QA pass.
 
 ## AI-003 — ExecutionProvider feasibility harness
 
-Status: active. Codex owner-local is the only current implementation front;
-the UI truthfully keeps providers disconnected until a real tracked run starts.
+Status: complete locally on 2026-07-20; publication evidence is recorded in
+`GPT/VERIFICATION.md`. The UI stays truthful until a real tracked run starts.
 
 Current slice:
 
@@ -61,17 +61,18 @@ Current slice:
 - fixture-only live smoke with read-only sandbox, timeout, cancellation, secret
   redaction, and proof that the main checkout is unchanged.
 
-Current evidence: provider contract and SDK harness implemented; 14 focused
-contract/integration tests pass; two real owner-local turns pass (structured
-read-only output and cancellation). Remaining before completion: durable broker
-ledger/restart reconciliation, worktree/process-tree supervisor, CLI recovery
-adapter, and operator-only project research route. See
+Current evidence: provider contract, SDK harness, durable SQLite broker ledger,
+startup reconciliation, external worktree/process-tree supervision, versioned
+`codex exec --json` adapter, operator session/CSRF boundary, research API, and
+truthful UI result rendering are implemented. The complete local gate is 13
+files / 48 tests, production build, two Playwright flows, plus a real CLI turn
+and a real durable-broker run against synthetic read-only repositories. See
 `docs/AI003_ARCHITECTURE_PACKET.md`.
 
-Integration: harness merged into `main` through
-[PR #4](https://github.com/Mr-Span/AIdeas/pull/4) at merge commit `ec869ff` after
-GitHub Actions `verify` passed. Next eligible packet: AI003-B durable Execution
-Broker ledger and restart reconciliation.
+Integration: the original harness entered `main` through
+[PR #4](https://github.com/Mr-Span/AIdeas/pull/4). The completed B/C/D slice is
+published in [PR #7](https://github.com/Mr-Span/AIdeas/pull/7); its clean
+GitHub Actions `verify` evidence is recorded in `GPT/VERIFICATION.md`.
 
 Acceptance:
 
@@ -99,7 +100,7 @@ backup deletion lag, and early-deletion behavior are confirmed.
 
 ## AI-004 — Research and clarification round trip
 
-Status: pending AI-003.
+Status: next; AI-003's single-agent report is the executable baseline.
 
 Acceptance:
 

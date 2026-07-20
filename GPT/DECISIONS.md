@@ -1,5 +1,20 @@
 # Decisions
 
+## 2026-07-20 — AI-003 execution boundary
+
+The trusted-host web runtime uses the stable `codex exec --json` adapter by
+default because it can use the existing Codex/ChatGPT login without bundling the
+SDK executable discovery into a Next.js route. `AIDEAS_CODEX_PROVIDER=sdk`
+retains the official SDK adapter as an explicit option. Both implement the same
+provider-neutral contract and stay disabled unless
+`AIDEAS_CODEX_ENABLED=1` is set on the trusted server process.
+
+Only a loopback request with an HttpOnly operator-session cookie and matching
+CSRF token may start, resume, or cancel research. Browser input cannot choose a
+prompt, host path, provider, sandbox, network grant, or approval policy. The
+server compiles the submitted revision and labels all captured/client content
+as untrusted data. LAN execution remains disabled until BL-001.
+
 ## 2026-07-18 — AI-003 is the sole active front
 
 The operator prioritized the Codex owner-local integration and research

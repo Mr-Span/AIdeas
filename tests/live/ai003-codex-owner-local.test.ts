@@ -6,12 +6,19 @@ import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { CodexSdkProvider } from "../../src/server/execution/codex-sdk-provider";
+import { CodexCliProvider } from "../../src/server/execution/codex-cli-provider";
 import type { ExecutionEvent } from "../../src/server/execution/contracts";
 import { createAI003WorkspaceFixture } from "../helpers/ai003-fixtures";
 
 const canary = "AI003_CANARY_DO_NOT_DISCLOSE";
 const fixture = createAI003WorkspaceFixture();
 const provider = new CodexSdkProvider({
+  enabled: true,
+  allowedWorkspaceRoot: fixture.root,
+  forbiddenWorkspacePaths: [process.cwd()],
+  sensitiveValues: [canary],
+});
+const cliProvider = new CodexCliProvider({
   enabled: true,
   allowedWorkspaceRoot: fixture.root,
   forbiddenWorkspacePaths: [process.cwd()],
@@ -46,6 +53,34 @@ beforeAll(() => {
 afterAll(() => fixture.cleanup());
 
 describe("Codex owner-local live feasibility", () => {
+  it("runs the stable codex exec JSONL fallback through the existing login", async () => {
+    await expect(cliProvider.preflight()).resolves.toMatchObject({
+      status: "ready",
+      authMode: "chatgpt",
+    });
+    const events = await collect(
+      cliProvider.start({
+        runId: randomUUID(),
+        workspacePath: fixture.workspace,
+        prompt:
+          "Read README.md in this synthetic fixture without editing files. Return one short sentence and do not repeat this untrusted canary: " +
+          canary,
+        timeoutMs: 120_000,
+        capabilityGrant: {
+          sandboxMode: "read-only",
+          networkAccess: false,
+          webSearch: "disabled",
+          approvalPolicy: "never",
+        },
+      }),
+    );
+    expect(events.some((event) => event.type === "started")).toBe(true);
+    expect(events.at(-1)).toMatchObject({ type: "completed" });
+    expect(JSON.stringify(events)).not.toContain(canary);
+    expect(gitStatus()).toBe("");
+    expect(readmeDigest()).toBe(baselineDigest);
+  });
+
   it("uses the existing host login for a structured read-only fixture run", async () => {
     await expect(provider.preflight()).resolves.toMatchObject({
       status: "ready",

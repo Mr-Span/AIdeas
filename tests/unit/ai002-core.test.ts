@@ -219,7 +219,7 @@ describe("AI-002 project service contract", () => {
     }
   });
 
-  it("submits with intake verification, research blocked, and no providerStarted", () => {
+  it("submits with intake verification and research awaiting an operator start", () => {
     const { service, cleanup } = createTestFixture();
     try {
       const project = service.createProject({
@@ -255,8 +255,8 @@ describe("AI-002 project service contract", () => {
       expect(steps).toHaveLength(5);
       expect(steps[0].status).toBe("verified");
       expect(steps[0].evidence_ref).toBe(`revision:${submit.revisionId}`);
-      expect(steps[1].status).toBe("blocked");
-      expect(String(steps[1].next_action)).toContain("providerului");
+      expect(steps[1].status).toBe("not_started");
+      expect(String(steps[1].next_action)).toContain("pornită");
       expect(
         service
           .getClientProjection(projectId)

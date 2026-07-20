@@ -91,14 +91,14 @@ Gate P1:
 Task: AI-003. Estimated effort: 2–4 weeks because provider behavior and Windows
 sandboxing are the highest uncertainties.
 
-Status: active and the sole implementation front. Secured LAN identity and
-final purge semantics are explicit backlog; their features stay disabled and do
-not block this phase.
+Status: complete locally on 2026-07-20. Secured LAN identity and final purge
+semantics remain explicit backlog and disabled.
 
-Harness checkpoint: provider contract and Codex SDK feasibility entered `main`
-through [PR #4](https://github.com/Mr-Span/AIdeas/pull/4) at merge commit
-`ec869ff` with CI green. AI003-B durable broker/restart reconciliation is next;
-Phase 2 is not complete.
+The provider contract and SDK harness entered `main` through
+[PR #4](https://github.com/Mr-Span/AIdeas/pull/4). AI003-B/C/D now add the
+durable broker, restart reconciliation, external worktree/process supervisor,
+version-gated CLI adapter, operator-only API, and the first real research result
+in the UI. Final publication evidence lives in `GPT/VERIFICATION.md`.
 
 Sequence:
 
@@ -129,6 +129,10 @@ Gate P2:
 ## Phase 3 — Research and clarification loop
 
 Task: AI-004. Estimated effort: 2–4 weeks.
+
+Status: next. The single-agent Markdown research report implemented in AI-003
+is the baseline; specialized parallel roles and typed proposal reconciliation
+are not yet implemented.
 
 Work packets:
 

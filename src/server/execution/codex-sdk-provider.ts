@@ -8,11 +8,13 @@ import {
 } from "@openai/codex-sdk";
 
 import {
+  executionResumeSchema,
   executionStartSchema,
   type CancelReceipt,
   type ExecutionErrorCode,
   type ExecutionEvent,
   type ExecutionProvider,
+  type ExecutionResume,
   type ExecutionStart,
   type ProviderHealth,
   type ProviderRunState,
@@ -131,7 +133,7 @@ export class CodexSdkProvider implements ExecutionProvider {
   private readonly enabled: boolean;
   private readonly allowedWorkspaceRoot: string;
   private readonly forbiddenWorkspacePaths: readonly string[];
-  private readonly codex: CodexClientLike;
+  private readonly codex: CodexClientLike | null;
   private readonly probe: CodexLocalProbe;
   private readonly clock: () => Date;
   private readonly redact: (value: string) => string;
@@ -145,15 +147,23 @@ export class CodexSdkProvider implements ExecutionProvider {
     this.clock = options.clock ?? (() => new Date());
     this.redact = createRedactor(options.sensitiveValues);
     const environment = buildCodexEnvironment();
-    this.codex =
-      options.codex ??
-      new Codex({
-        env: environment,
-        config: {
-          features: { hooks: false },
-          mcp_servers: {},
-        },
-      });
+    if (options.codex) {
+      this.codex = options.codex;
+    } else if (!this.enabled) {
+      this.codex = null;
+    } else {
+      try {
+        this.codex = new Codex({
+          env: environment,
+          config: {
+            features: { hooks: false },
+            mcp_servers: {},
+          },
+        });
+      } catch {
+        this.codex = null;
+      }
+    }
     this.probe = options.probe ?? createCodexLocalProbe(environment);
   }
 
@@ -165,7 +175,17 @@ export class CodexSdkProvider implements ExecutionProvider {
         version: null,
         authMode: "unknown",
         code: "disabled",
-        detail: "Codex owner-local execution is disabled by configuration.",
+        detail: "Execuția Codex locală este dezactivată în configurația serverului.",
+      };
+    }
+    if (!this.codex) {
+      return {
+        provider: "codex",
+        status: "blocked",
+        version: null,
+        authMode: "unknown",
+        code: "provider_unavailable",
+        detail: "Runtime-ul Codex SDK nu este disponibil pe hostul local.",
       };
     }
     return this.probe();
@@ -173,6 +193,17 @@ export class CodexSdkProvider implements ExecutionProvider {
 
   async *start(rawInput: ExecutionStart): AsyncIterable<ExecutionEvent> {
     const input = executionStartSchema.parse(rawInput);
+    yield* this.runThread(input);
+  }
+
+  async *resume(rawInput: ExecutionResume): AsyncIterable<ExecutionEvent> {
+    const input = executionResumeSchema.parse(rawInput);
+    yield* this.runThread(input);
+  }
+
+  private async *runThread(
+    input: ExecutionStart | ExecutionResume,
+  ): AsyncIterable<ExecutionEvent> {
     if (this.states.has(input.runId)) {
       yield {
         type: "blocked",
@@ -246,18 +277,34 @@ export class CodexSdkProvider implements ExecutionProvider {
       activeRun.controller.abort();
     }, input.timeoutMs);
 
-    let providerRunId: string | null = null;
+    let providerRunId: string | null =
+      "providerRunId" in input ? input.providerRunId : null;
     let finalResponse = "";
     let turnCompleted = false;
 
     try {
-      const thread = this.codex.startThread({
-        workingDirectory: workspace,
-        sandboxMode: input.capabilityGrant.sandboxMode,
-        networkAccessEnabled: input.capabilityGrant.networkAccess,
-        webSearchMode: input.capabilityGrant.webSearch,
-        approvalPolicy: input.capabilityGrant.approvalPolicy,
-      });
+      if (!this.codex) {
+        throw new Error("provider unavailable");
+      }
+      if ("providerRunId" in input && !this.codex.resumeThread) {
+        throw new Error("provider protocol does not support resume");
+      }
+      const thread =
+        "providerRunId" in input && this.codex.resumeThread
+          ? this.codex.resumeThread(input.providerRunId, {
+              workingDirectory: workspace,
+              sandboxMode: input.capabilityGrant.sandboxMode,
+              networkAccessEnabled: input.capabilityGrant.networkAccess,
+              webSearchMode: input.capabilityGrant.webSearch,
+              approvalPolicy: input.capabilityGrant.approvalPolicy,
+            })
+          : this.codex.startThread({
+              workingDirectory: workspace,
+              sandboxMode: input.capabilityGrant.sandboxMode,
+              networkAccessEnabled: input.capabilityGrant.networkAccess,
+              webSearchMode: input.capabilityGrant.webSearch,
+              approvalPolicy: input.capabilityGrant.approvalPolicy,
+            });
       const { events } = await thread.runStreamed(input.prompt, {
         signal: activeRun.controller.signal,
         outputSchema: input.outputSchema,

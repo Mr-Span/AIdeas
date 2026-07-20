@@ -1,11 +1,12 @@
 # AI-003 Codex owner-local feasibility packet
 
-Status: `harness proven and merged; integration active`, 2026-07-18. The
+Status: `implementation complete; PR #7 CI green`, 2026-07-20. The original
 harness entered `main` through
-[PR #4](https://github.com/Mr-Span/AIdeas/pull/4) at merge commit `ec869ff` after
-clean-checkout CI passed. This packet freezes
-the first executable provider boundary. It does not mark AI-003 complete: the
-durable broker, worktree supervisor, and project research route remain next.
+[PR #4](https://github.com/Mr-Span/AIdeas/pull/4). The completed slice now adds
+the durable broker, external worktree/process supervision, version-gated CLI
+adapter, operator-only project route, and the first real research-result UI.
+The completed slice is published as
+[PR #7](https://github.com/Mr-Span/AIdeas/pull/7).
 
 ## Priority and scope
 
@@ -41,18 +42,28 @@ Official sources:
 
 ```mermaid
 flowchart LR
-  Operator["Operator on trusted host"] --> Broker["Execution Broker — next"]
+  Operator["Operator on trusted host"] --> UI["AIdeas operator UI"]
+  UI --> Session["Loopback session + CSRF"]
+  Session --> API["Research API"]
+  API --> Broker["Durable Execution Broker"]
+  Broker --> SQLite["SQLite run/event ledger"]
+  Broker --> Artifacts["Content-addressed artifacts"]
+  Broker --> Worktree["External read-only Git worktree"]
   Broker --> Contract["ExecutionProvider contract"]
-  Contract --> Adapter["CodexSdkProvider"]
-  Adapter --> SDK["Official TypeScript SDK"]
-  SDK --> CLI["Pinned local Codex CLI"]
+  Contract --> CLIAdapter["CodexCliProvider — default"]
+  Contract --> SDKAdapter["CodexSdkProvider — explicit option"]
+  CLIAdapter --> CLI["codex exec --json"]
+  SDKAdapter --> SDK["Official TypeScript SDK"]
   CLI --> Auth["Existing host-local ChatGPT login"]
-  CLI --> Fixture["Allowlisted fixture/worktree"]
-  Adapter --> Events["Safe normalized events"]
+  SDK --> Auth
+  CLI --> Worktree
+  SDK --> Worktree
+  CLIAdapter --> Events["Safe normalized events"]
+  SDKAdapter --> Events
   Events --> Broker
 
-  Client["Client browser"] -. "no direct path" .-> Adapter
-  Main["Main checkout"] -. "protected path" .-> Fixture
+  Client["Future LAN client"] -. "disabled / no execution path" .-> API
+  Main["Main checkout"] -. "protected + unchanged proof" .-> Worktree
 ```
 
 The browser never receives the SDK, CLI process, auth store, process environment,
@@ -100,24 +111,36 @@ provider-specific payloads. Reasoning items are dropped.
   grant;
 - result text is bounded and linked to a SHA-256 digest;
 - duplicate internal run IDs are blocked;
+- the CLI PID is persisted before provider thread start; after a server restart,
+  its OS name and command marker must match before the exact process tree is
+  terminated and resume becomes available;
+- resume uses a constant server-owned prompt plus an atomic status transition
+  and idempotency receipt;
 - error output is classified into stable safe codes rather than returned raw.
 
-## Real feasibility evidence
+## Real implementation evidence
 
-The live suite `pnpm.cmd test:ai003:live` ran two real Codex turns through the
-existing ChatGPT login in a temporary synthetic Git repository:
+The SDK feasibility suite previously ran structured output and cancellation
+through the existing ChatGPT login. The 2026-07-20 CLI compatibility test also
+ran a real `codex exec --json` turn in a temporary synthetic Git repository:
 
-1. structured read-only analysis with JSON Schema, network and web search off;
-2. cancellation immediately after the real `thread.started` event.
+1. preflight confirmed the existing ChatGPT login and compatible CLI version;
+2. the run emitted real `thread.started` and terminal completion receipts;
+3. the canary was absent from normalized events;
+4. Git status and the fixture README digest remained unchanged.
 
-Both passed. Before and after each run, Git status stayed clean and the fixture
-README digest was unchanged. The canary did not appear in normalized events.
-The main AIdeas checkout was a forbidden workspace and was not passed to Codex.
+The full local gate passes lint, strict TypeScript, 13 files / 48 tests, a
+production build, and 2/2 Playwright desktop/mobile flows. Coverage includes
+idempotency, restart reconciliation, explicit resume, terminal receipts,
+process-tree cleanup, workspace escape blocking, operator/CSRF enforcement,
+route input rejection, event normalization, secret redaction, and truthful UI
+states. The main AIdeas checkout is protected and never passed as the execution
+workspace.
 
-Contract/integration coverage (14 focused tests) also proves timeout, duplicate-run rejection,
-disabled-by-default behavior, workspace escape blocking, event normalization,
-reasoning/command-output suppression, secret redaction, and safe environment
-construction without consuming provider runs.
+A separate 66.00-second live broker test proves the composed path: synthetic
+eight-answer capture → submitted revision → external worktree → real Codex CLI
+→ normalized events → Markdown artifact → terminal receipt → verified Research
+step. It uses no client data.
 
 ## Failure map
 
@@ -133,30 +156,32 @@ construction without consuming provider runs.
 | unsupported JSONL/protocol | `provider_protocol` | after compatibility review |
 | other provider failure | `provider_error` | manual classification |
 
-## Honest limitations after this spike
+## Honest limitations after implementation
 
-1. Run state is in-memory inside the adapter. SDK threads can be resumed, but
-   AIdeas does not yet persist the run ledger/provider thread ID in SQLite or
-   reconcile an active run after Control Service restart.
-2. AbortSignal cancellation passed against a real Codex turn. Windows descendant
-   process-tree cleanup and crash-at-boundary fault injection are not yet proven.
-3. `codex exec --json` was verified as installed/stable but the recovery adapter
-   and compatibility fixture are not implemented yet.
-4. No project API or UI can start research. The visible Research step correctly
-   remains blocked; the live run is a feasibility receipt, not a client result.
+1. The current research pass uses one Codex run. Specialized parallel roles,
+   typed findings, deduplication, contradiction handling, and iterative A/B
+   clarification belong to AI-004.
+2. Startup reconciliation persists the provider thread, reaps a verified stale
+   CLI process, and requires explicit operator resume. It fails closed when the
+   prior process identity cannot be proven and never silently restarts work.
+3. Automated crash-at-every-side-effect fault injection is not yet exhaustive;
+   deterministic integration tests cover the principal restart boundaries.
+4. LAN/client initiation remains disabled. The implemented session boundary is
+   intentionally loopback-only and is not a substitute for BL-001 identity,
+   TLS, revocation, and request-limit controls.
 5. Usage events contain provider-reported tokens only. AIdeas does not invent a
    monetary cost when the provider does not report one.
 6. This personal ChatGPT session is valid only on the trusted owner host. It is
    never a client login or a multi-user product credential.
-7. SDK threads are persisted in Codex's provider-managed local session store so
-   they can be resumed. The harness proves AIdeas event redaction, not erasure of
+7. Provider threads are persisted in Codex's provider-managed local session
+   store so they can be resumed. AIdeas proves event redaction, not erasure of
    the prompt from Codex/OpenAI-managed session history; client disclosure,
    provider retention, and ephemeral-run policy must be explicit before real
    client material is sent.
 
-## Remaining AI-003 work packets
+## Completed AI-003 work packets
 
-### AI003-B — Durable Execution Broker
+### AI003-B — Durable Execution Broker — complete
 
 - migrations for run, event, provider-thread, and terminal receipt records;
 - one-writer commands around provider events;
@@ -164,14 +189,14 @@ construction without consuming provider runs.
 - inspect after restart and explicit resume proposal;
 - output stored through Artifact Store, not a raw SQLite blob.
 
-### AI003-C — Workspace and recovery supervisor
+### AI003-C — Workspace and recovery supervisor — complete
 
 - external Git worktree lifecycle with protected-main proof;
 - process-tree timeout/cleanup and crash injection on Windows;
 - stable `codex exec --json` recovery/diagnostic adapter;
 - SDK/CLI compatibility contract and version gate.
 
-### AI003-D — Operator-only project research route
+### AI003-D — Operator-only project research route — complete
 
 - compile an approved project revision into a bounded prompt/context packet;
 - start only after durable capture and policy checks;
@@ -179,6 +204,6 @@ construction without consuming provider runs.
 - move Research to `in_progress` only after a real start receipt;
 - preserve client-safe projection and keep client initiation disabled.
 
-AI-003 closes only after B, C, and D pass focused security, restart, and browser
-truthfulness gates. AI-004 then owns specialized multi-role web research and
-human clarification rounds.
+AI-003 has passed its local security, restart, provider, protected-workspace,
+and browser-truthfulness gates. AI-004 owns specialized multi-role web research
+and human clarification rounds; BL-001 owns any LAN/client execution surface.
