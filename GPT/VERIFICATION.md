@@ -233,3 +233,51 @@
 - AI-003 remains active. The next eligible packet is the durable Execution
   Broker ledger and restart reconciliation; secured LAN and final purge remain
   backlog.
+
+## 2026-07-20 — AI-004 specialized research round trip
+
+- Migration 4 creates durable `research_rounds` and `research_role_runs` with
+  foreign keys, checked lifecycle values and artifact references.
+- Four role profiles run through the existing provider-neutral AI-003 port in
+  external read-only worktrees. Intent analysis has network/web disabled; the
+  other three roles receive live-web grants. Concurrency is bounded to two.
+- Codex CLI `--output-schema` was verified from the installed command help and
+  is now wired to a server-owned temporary schema file. The SDK path continues
+  to receive the same schema directly.
+- Focused owner-local live suite after the CLI schema change: 1 file / 3 tests
+  passed in 64.95s. `codex exec` returned schema-valid JSON from a synthetic
+  read-only repository, the SDK structured run passed, cancellation passed,
+  the canary stayed redacted and the fixture checkout remained unchanged.
+- Typed output validation enforces HTTP(S) URLs, ISO retrieval time,
+  quote/summary boundary, confidence, 25-word quote limit and evidence for
+  market findings.
+- Deterministic reconciliation retains contributing roles and distinct
+  evidence, merges duplicate titles/questions, and links explicit opposing
+  stances without hiding either proposal.
+- Operator-only APIs reject missing sessions and client-supplied roles, prompts
+  or capability grants. Approval validates card IDs, blocking answers and A/B
+  options before creating a new immutable revision.
+- The integration fixture contains an explicit prompt-injection string. All
+  four provider calls retained server prompts and grants; no provider output
+  writes canonical state without the approval command.
+- `pnpm.cmd lint`: pass.
+- `pnpm.cmd typecheck`: pass.
+- `pnpm.cmd test:run`: pass, 16 files / 54 tests.
+- `pnpm.cmd build`: pass, including both AI-004 dynamic routes.
+- First `pnpm.cmd verify:full` passed lint, typecheck, all 54 tests and build;
+  Playwright could not start because the existing PID 8800 dev server held the
+  repository's Next dev lock. PID 8800 was verified as Node and stopped.
+- First five-test Chromium run found a real concurrent operator-session race:
+  AI-003 and AI-004 bootstrap requests could issue different cookie/token pairs.
+  A shared in-flight session promise fixed the race.
+- Final `pnpm.cmd test:e2e`: pass, 5/5 Chromium tests. Coverage includes the
+  AI-004 proposal/evidence view, blocking question, A/B selection and approved
+  revision, plus existing durable intake, two-way collaboration, mobile
+  overflow and visual checks.
+- Final post-documentation `pnpm.cmd verify:full`: pass; lint, TypeScript,
+  16 files / 54 tests, production build and 5/5 Chromium tests all passed in
+  one clean gate. `pnpm.cmd audit --prod`: no known vulnerabilities.
+- Live client-data research was not run. Provider behavior is covered by the
+  same local adapters validated in AI-003 plus synthetic AI-004 provider-port
+  fixtures. Interrupted multi-role rounds fail visibly and require an explicit
+  new round; partial-role resume remains a product decision.

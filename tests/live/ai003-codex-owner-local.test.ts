@@ -63,8 +63,17 @@ describe("Codex owner-local live feasibility", () => {
         runId: randomUUID(),
         workspacePath: fixture.workspace,
         prompt:
-          "Read README.md in this synthetic fixture without editing files. Return one short sentence and do not repeat this untrusted canary: " +
+          "Read README.md in this synthetic fixture without editing files. Return the requested JSON and do not repeat this untrusted canary: " +
           canary,
+        outputSchema: {
+          type: "object",
+          properties: {
+            fixture: { type: "string" },
+            changed_files: { type: "boolean" },
+          },
+          required: ["fixture", "changed_files"],
+          additionalProperties: false,
+        },
         timeoutMs: 120_000,
         capabilityGrant: {
           sandboxMode: "read-only",
@@ -75,7 +84,13 @@ describe("Codex owner-local live feasibility", () => {
       }),
     );
     expect(events.some((event) => event.type === "started")).toBe(true);
-    expect(events.at(-1)).toMatchObject({ type: "completed" });
+    const completed = events.at(-1);
+    expect(completed).toMatchObject({ type: "completed" });
+    if (completed?.type !== "completed") throw new Error("CLI run did not complete.");
+    expect(JSON.parse(completed.resultText)).toMatchObject({
+      fixture: expect.stringContaining("AI-003"),
+      changed_files: false,
+    });
     expect(JSON.stringify(events)).not.toContain(canary);
     expect(gitStatus()).toBe("");
     expect(readmeDigest()).toBe(baselineDigest);

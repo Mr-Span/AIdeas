@@ -7,6 +7,7 @@ export type DomainErrorCode =
   | "IDEMPOTENCY_CONFLICT"
   | "PAYLOAD_TOO_LARGE"
   | "UNSUPPORTED_MEDIA"
+  | "PROVIDER_UNAVAILABLE"
   | "STORAGE_UNAVAILABLE";
 
 export class DomainError extends Error {

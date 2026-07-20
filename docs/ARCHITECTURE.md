@@ -246,6 +246,10 @@ profiles, not permanently running services.
 Profiles cannot delegate new authority. The coordinator grants paths, tools,
 network destinations, duration and side-effect classes per attempt.
 
+AI-004 implements the first four profiles as separate bounded provider runs.
+Their durable lifecycle, typed output, deterministic reconciliation and human
+approval boundary are specified in `AI004_ARCHITECTURE_PACKET.md`.
+
 ## Research evidence model
 
 Every material external finding records:

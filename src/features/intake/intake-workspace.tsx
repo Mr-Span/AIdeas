@@ -50,6 +50,7 @@ import {
   submitProject,
 } from "./project-api";
 import { ProjectSidebar } from "./project-sidebar";
+import { ResearchRoundPanel } from "./research-round-panel";
 import {
   knownFacts,
   projectWorkflowStages,
@@ -789,6 +790,17 @@ export function IntakeWorkspace() {
               <h2 id="research-result-title">Rezultatul cercetării</h2>
               <pre>{latestResearchRun.resultText}</pre>
             </section>
+          ) : null}
+
+          {project ? (
+            <ResearchRoundPanel
+              baselineReady={latestResearchRun?.status === "completed"}
+              project={project}
+              onProjectChange={(nextProject) => {
+                setProject(nextProject);
+                setProjectId(nextProject.id);
+              }}
+            />
           ) : null}
 
           {operationError ? (
