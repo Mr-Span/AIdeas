@@ -1,10 +1,12 @@
 # AI-003 Codex owner-local feasibility packet
 
-Status: `implementation complete locally; publication gate pending`,
-2026-07-20. The original harness entered `main` through
+Status: `implementation complete; PR #7 CI green`, 2026-07-20. The original
+harness entered `main` through
 [PR #4](https://github.com/Mr-Span/AIdeas/pull/4). The completed slice now adds
 the durable broker, external worktree/process supervision, version-gated CLI
 adapter, operator-only project route, and the first real research-result UI.
+The completed slice is published as
+[PR #7](https://github.com/Mr-Span/AIdeas/pull/7).
 
 ## Priority and scope
 

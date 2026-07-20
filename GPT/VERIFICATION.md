@@ -38,6 +38,9 @@
   Research transition to `verified`.
 - No real client content was used by live verification. `.env`, credentials,
   provider stores, SQLite data, worktrees, and test reports remain outside Git.
+- Public branch `codex/ai003-broker-cli-research` was pushed at commit
+  `474f515`; [PR #7](https://github.com/Mr-Span/AIdeas/pull/7) passed the
+  clean-checkout [GitHub Actions verify](https://github.com/Mr-Span/AIdeas/actions/runs/29752905964).
 
 ## 2026-07-20 — Eight-question intake
 

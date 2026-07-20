@@ -71,8 +71,8 @@ and a real durable-broker run against synthetic read-only repositories. See
 
 Integration: the original harness entered `main` through
 [PR #4](https://github.com/Mr-Span/AIdeas/pull/4). The completed B/C/D slice is
-prepared on `codex/ai003-broker-cli-research`; final PR/CI evidence is appended
-to `GPT/VERIFICATION.md` after publication.
+published in [PR #7](https://github.com/Mr-Span/AIdeas/pull/7); its clean
+GitHub Actions `verify` evidence is recorded in `GPT/VERIFICATION.md`.
 
 Acceptance:
 
