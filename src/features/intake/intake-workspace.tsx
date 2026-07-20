@@ -2,6 +2,8 @@
 
 import { useEffect, useState, type ChangeEvent } from "react";
 import {
+  ArrowLeft,
+  ArrowRight,
   CheckCircle2,
   Info,
   Lightbulb,
@@ -12,6 +14,14 @@ import {
   Send,
   Upload,
 } from "lucide-react";
+
+import {
+  countCompletedClarifications,
+  emptyClarificationAnswers,
+  intakeQuestions,
+  normalizeClarificationAnswers,
+  type ClarificationAnswers,
+} from "@/domain/intake-questions";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -37,7 +47,6 @@ import {
 } from "./project-api";
 import { ProjectSidebar } from "./project-sidebar";
 import {
-  initialIdeaAnswer,
   knownFacts,
   projectWorkflowStages,
   workflowStages,
@@ -76,12 +85,14 @@ function clearPendingKey(command: string) {
 
 function draftFingerprint(input: {
   idea: string;
+  clarifications: ClarificationAnswers;
   notes: string;
   approvalRequired: boolean;
   files: File[];
 }) {
   return JSON.stringify({
     idea: input.idea,
+    clarifications: input.clarifications,
     notes: input.notes,
     approvalRequired: input.approvalRequired,
     files: input.files.map((file) => ({
@@ -100,7 +111,9 @@ function errorMessage(error: unknown) {
 
 export function IntakeWorkspace() {
   const [projectName, setProjectName] = useState("AIdeas Pilot");
-  const [ideaAnswer, setIdeaAnswer] = useState(initialIdeaAnswer);
+  const [clarificationAnswers, setClarificationAnswers] =
+    useState<ClarificationAnswers>(emptyClarificationAnswers);
+  const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
   const [notes, setNotes] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [fileInputVersion, setFileInputVersion] = useState(0);
@@ -125,6 +138,17 @@ export function IntakeWorkspace() {
   const stages = project
     ? projectWorkflowStages(project)
     : workflowStages(false);
+  const activeQuestion = intakeQuestions[activeQuestionIndex];
+  const completedClarifications = countCompletedClarifications(
+    clarificationAnswers,
+  );
+  const clarificationProgress = Math.round(
+    (completedClarifications / intakeQuestions.length) * 100,
+  );
+  const ideaAnswer =
+    clarificationAnswers.concept?.trim() ||
+    clarificationAnswers.audience_problem?.trim() ||
+    "";
 
   useEffect(() => {
     let cancelled = false;
@@ -144,12 +168,21 @@ export function IntakeWorkspace() {
         setProject(loadedProject);
         setProjectId(loadedProject.id);
         setProjectName(loadedProject.displayName);
-        setIdeaAnswer(loadedProject.draft.idea);
+        const loadedAnswers = normalizeClarificationAnswers(
+          loadedProject.draft.clarifications,
+          loadedProject.draft.idea,
+        );
+        setClarificationAnswers(loadedAnswers);
+        const firstIncomplete = intakeQuestions.findIndex(
+          (question) => !loadedAnswers[question.id]?.trim(),
+        );
+        setActiveQuestionIndex(firstIncomplete === -1 ? 0 : firstIncomplete);
         setNotes(loadedProject.draft.notes);
         setApprovalRequired(loadedProject.draft.approvalRequired);
         setLastSavedFingerprint(
           draftFingerprint({
             idea: loadedProject.draft.idea,
+            clarifications: loadedAnswers,
             notes: loadedProject.draft.notes,
             approvalRequired: loadedProject.draft.approvalRequired,
             files: [],
@@ -197,7 +230,8 @@ export function IntakeWorkspace() {
     setProject(null);
     setProjectId(null);
     setProjectName("Proiect fără titlu");
-    setIdeaAnswer("");
+    setClarificationAnswers(emptyClarificationAnswers());
+    setActiveQuestionIndex(0);
     setNotes("");
     setSelectedFiles([]);
     setFileInputVersion((version) => version + 1);
@@ -247,6 +281,7 @@ export function IntakeWorkspace() {
     const currentProject = await ensureProject();
     const currentFingerprint = draftFingerprint({
       idea: ideaAnswer,
+      clarifications: clarificationAnswers,
       notes,
       approvalRequired,
       files: selectedFiles,
@@ -268,6 +303,7 @@ export function IntakeWorkspace() {
       expectedVersion: currentProject.version,
       idempotencyKey: key,
       idea: ideaAnswer,
+      clarifications: clarificationAnswers,
       notes,
       approvalRequired,
       files: selectedFiles,
@@ -280,6 +316,7 @@ export function IntakeWorkspace() {
     setLastSavedFingerprint(
       draftFingerprint({
         idea: ideaAnswer,
+        clarifications: clarificationAnswers,
         notes,
         approvalRequired,
         files: [],
@@ -305,11 +342,17 @@ export function IntakeWorkspace() {
   }
 
   async function handleSubmit() {
-    if (ideaAnswer.trim().length < 80) {
+    const firstIncomplete = intakeQuestions.findIndex(
+      (question) => !clarificationAnswers[question.id]?.trim(),
+    );
+    if (firstIncomplete !== -1) {
+      setActiveQuestionIndex(firstIncomplete);
       setValidationError(
-        "Adaugă cel puțin câteva propoziții despre utilizator, problemă și rezultat.",
+        "Răspunde la această clarificare înainte de trimitere. Dacă decizia este deschisă, poți scrie «Nu știu încă».",
       );
-      setLiveMessage("Schița are nevoie de mai mult context înainte de analiză.");
+      setLiveMessage(
+        `Mai sunt ${intakeQuestions.length - completedClarifications} clarificări înainte de analiză.`,
+      );
       return;
     }
 
@@ -333,6 +376,7 @@ export function IntakeWorkspace() {
       setLastSavedFingerprint(
         draftFingerprint({
           idea: result.project.draft.idea,
+          clarifications: result.project.draft.clarifications,
           notes: result.project.draft.notes,
           approvalRequired: result.project.draft.approvalRequired,
           files: [],
@@ -417,16 +461,21 @@ export function IntakeWorkspace() {
           </div>
 
           <div className="intake-progress">
-            <span>4 din 8 clarificări</span>
-            <Progress aria-label="4 din 8 clarificări completate" value={50} />
+            <span>
+              {completedClarifications} din {intakeQuestions.length} clarificări
+            </span>
+            <Progress
+              aria-label={`${completedClarifications} din ${intakeQuestions.length} clarificări completate`}
+              value={clarificationProgress}
+            />
           </div>
 
           <section className="question-surface" aria-labelledby="question-title">
             <div className="question-label" id="question-title">
               <span className="question-index" aria-hidden="true">
-                4
+                {activeQuestionIndex + 1}
               </span>
-              <span>Cine va folosi produsul și ce încearcă să rezolve?</span>
+              <span>{activeQuestion.title}</span>
             </div>
 
             <Field
@@ -434,26 +483,60 @@ export function IntakeWorkspace() {
               data-invalid={validationError ? true : undefined}
             >
               <label className="sr-only" htmlFor="idea-answer">
-                Răspuns despre utilizator și problema rezolvată
+                {activeQuestion.label}
               </label>
               <Textarea
                 aria-describedby="idea-answer-hint"
                 aria-invalid={validationError ? true : undefined}
                 className="idea-textarea"
                 id="idea-answer"
-                value={ideaAnswer}
+                placeholder={activeQuestion.placeholder}
+                value={clarificationAnswers[activeQuestion.id] ?? ""}
                 onChange={(event) => {
-                  setIdeaAnswer(event.target.value);
+                  const value = event.target.value;
+                  setClarificationAnswers((answers) => ({
+                    ...answers,
+                    [activeQuestion.id]: value,
+                  }));
                   if (validationError) setValidationError("");
                 }}
               />
               <FieldDescription className="field-hint" id="idea-answer-hint">
                 <Lightbulb aria-hidden="true" size={17} />
-                Fii specific: cine sunt utilizatorii, ce încearcă să obțină și
-                ce problemă importantă rezolvi.
+                {activeQuestion.hint}
               </FieldDescription>
               <FieldError>{validationError}</FieldError>
             </Field>
+
+            <div className="question-navigation">
+              <Button
+                disabled={activeQuestionIndex === 0}
+                variant="outline"
+                onClick={() => {
+                  setValidationError("");
+                  setActiveQuestionIndex((index) => Math.max(0, index - 1));
+                }}
+              >
+                <ArrowLeft data-icon="inline-start" aria-hidden="true" />
+                Înapoi
+              </Button>
+              <span aria-live="polite">
+                Întrebarea {activeQuestionIndex + 1} din {intakeQuestions.length}
+              </span>
+              <Button
+                disabled={activeQuestionIndex === intakeQuestions.length - 1}
+                variant="outline"
+                onClick={() => {
+                  setValidationError("");
+                  setActiveQuestionIndex((index) =>
+                    Math.min(intakeQuestions.length - 1, index + 1),
+                  );
+                }}
+              >
+                Înainte
+                <ArrowRight data-icon="inline-end" aria-hidden="true" />
+              </Button>
+            </div>
           </section>
 
           <div className="utility-grid">

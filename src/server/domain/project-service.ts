@@ -3,6 +3,11 @@ import { TextDecoder, TextEncoder } from "node:util";
 
 import type { StoredArtifact } from "@/server/artifacts/artifact-store";
 import {
+  intakeQuestions,
+  normalizeClarificationAnswers,
+  type ClarificationAnswers,
+} from "@/domain/intake-questions";
+import {
   collaborationInputSchema,
   createProjectInputSchema,
   planStepStatusSchema,
@@ -36,6 +41,7 @@ type ProjectServiceOptions = {
 
 type DraftPayload = {
   idea: string;
+  clarifications: ClarificationAnswers;
   notes: string;
   approvalRequired: boolean;
   submitted: boolean;
@@ -115,11 +121,18 @@ function integer(row: Record<string, unknown>, key: string) {
 function buildCaptureMarkdown(input: {
   displayName: string;
   idea: string;
+  clarifications: ClarificationAnswers;
   notes: string;
   approvalRequired: boolean;
   submitted: boolean;
 }) {
-  return `# ${input.displayName}\n\n## Idee\n\n${input.idea}\n\n## Notițe\n\n${input.notes}\n\n## Control\n\n- Aprobare umană Git: ${input.approvalRequired ? "da" : "nu"}\n- Trimis pentru analiză: ${input.submitted ? "da" : "nu"}\n`;
+  const clarificationMarkdown = intakeQuestions
+    .map(
+      (question, index) =>
+        `### ${index + 1}. ${question.title}\n\n${input.clarifications[question.id]?.trim() || "_Fără răspuns_"}`,
+    )
+    .join("\n\n");
+  return `# ${input.displayName}\n\n## Idee\n\n${input.idea}\n\n## Clarificări\n\n${clarificationMarkdown}\n\n## Notițe\n\n${input.notes}\n\n## Control\n\n- Aprobare umană Git: ${input.approvalRequired ? "da" : "nu"}\n- Trimis pentru analiză: ${input.submitted ? "da" : "nu"}\n`;
 }
 
 export class ProjectService {
@@ -369,6 +382,7 @@ export class ProjectService {
     const nextVersion = input.expectedVersion + 1;
     const payload: DraftPayload = {
       idea: input.idea,
+      clarifications: input.clarifications,
       notes: input.notes,
       approvalRequired: input.approvalRequired,
       submitted: false,
@@ -394,6 +408,7 @@ export class ProjectService {
           buildCaptureMarkdown({
             displayName: text(project, "display_name"),
             idea: input.idea,
+            clarifications: input.clarifications,
             notes: input.notes,
             approvalRequired: input.approvalRequired,
             submitted: false,
@@ -561,6 +576,10 @@ export class ProjectService {
       const currentPayload = JSON.parse(
         text(currentRevision, "payload_json"),
       ) as DraftPayload;
+      currentPayload.clarifications = normalizeClarificationAnswers(
+        currentPayload.clarifications,
+        currentPayload.idea,
+      );
       const submittedPayload: DraftPayload = {
         ...currentPayload,
         submitted: true,
@@ -946,6 +965,7 @@ export class ProjectService {
       notes: "",
       approvalRequired: false,
       submitted: false,
+      clarifications: {},
     };
     if (currentRevisionId) {
       const revision = this.store.database
@@ -953,6 +973,10 @@ export class ProjectService {
         .get(currentRevisionId) as Record<string, unknown> | undefined;
       if (revision) payload = JSON.parse(text(revision, "payload_json")) as DraftPayload;
     }
+    const clarifications = normalizeClarificationAnswers(
+      payload.clarifications,
+      payload.idea,
+    );
 
     const stepRows = this.store.database
       .prepare(
@@ -1023,6 +1047,7 @@ export class ProjectService {
       draft: {
         revisionId: currentRevisionId,
         idea: payload.idea,
+        clarifications,
         notes: payload.notes,
         approvalRequired: payload.approvalRequired,
         submitted: payload.submitted,

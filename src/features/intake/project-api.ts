@@ -4,6 +4,7 @@ import type {
   CreateProjectResult,
   SubmitProjectResult,
 } from "@/server/domain/contracts";
+import type { ClarificationAnswers } from "@/domain/intake-questions";
 
 type ApiErrorPayload = {
   error?: { code?: string; message?: string };
@@ -56,6 +57,7 @@ export async function saveDraft(input: {
   expectedVersion: number;
   idempotencyKey: string;
   idea: string;
+  clarifications: ClarificationAnswers;
   notes: string;
   approvalRequired: boolean;
   files: File[];
@@ -67,6 +69,7 @@ export async function saveDraft(input: {
       expectedVersion: input.expectedVersion,
       idempotencyKey: input.idempotencyKey,
       idea: input.idea,
+      clarifications: input.clarifications,
       notes: input.notes,
       approvalRequired: input.approvalRequired,
     }),
