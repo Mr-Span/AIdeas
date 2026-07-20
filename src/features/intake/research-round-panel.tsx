@@ -13,6 +13,7 @@ import type {
 
 import {
   approveResearchRound,
+  appendOperatorMessage,
   loadProject,
   loadResearchRoundState,
   startResearchRound,
@@ -68,7 +69,12 @@ export function ResearchRoundPanel({
   const [responses, setResponses] = useState<ResearchApprovalResponses>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [consentedRevisionId, setConsentedRevisionId] = useState<string | null>(null);
+  const [publishedCards, setPublishedCards] = useState<Set<string>>(new Set());
   const round = state.latestRound;
+  const providerConsent = Boolean(
+    project.draft.revisionId && consentedRevisionId === project.draft.revisionId,
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -97,11 +103,19 @@ export function ResearchRoundPanel({
     return () => window.clearInterval(timer);
   }, [project.id, round?.status, onProjectChange]);
 
-  const missingBlocking = useMemo(
-    () =>
-      round?.cards.filter((card) => card.blocking && !responses[card.id]).length ?? 0,
+  const missingCards = useMemo(
+    () => round?.cards.filter((card) => !responses[card.id]).length ?? 0,
     [responses, round?.cards],
   );
+
+  const redactionPreview = useMemo(() => {
+    const raw = [project.draft.idea, ...Object.values(project.draft.clarifications), project.draft.notes].filter(Boolean).join("\n\n");
+    return raw
+      .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/giu, "[REDACTED_EMAIL]")
+      .replace(/(?<!\d)(?:\+?\d[\d\s().-]{7,}\d)(?!\d)/gu, "[REDACTED_PHONE]")
+      .replace(/(api[_-]?key|secret|token|password)\s*[:=]\s*\S+/giu, "$1=[REDACTED]")
+      .slice(0, 2_000);
+  }, [project.draft.clarifications, project.draft.idea, project.draft.notes]);
 
   async function handleStart() {
     if (!project.draft.revisionId) return;
@@ -116,11 +130,30 @@ export function ResearchRoundPanel({
           `research-round.${project.id}.${project.version}`,
           `${project.draft.revisionId}:${round?.id ?? "first"}:${round?.status ?? "new"}`,
         ),
+        providerConsentConfirmed: true,
       });
       setState(next);
       onProjectChange((await loadProject(project.id)).project);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Runda nu a putut porni.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handlePublishCard(cardId: string, prompt: string, why: string) {
+    setBusy(true);
+    setError("");
+    try {
+      await appendOperatorMessage({
+        projectId: project.id,
+        idempotencyKey: localKey(`publish-card.${cardId}`, `${prompt}:${why}`),
+        body: `Întrebare pentru client:\n\n${prompt}\n\nDe ce este necesară: ${why}`,
+      });
+      setPublishedCards((current) => new Set(current).add(cardId));
+      onProjectChange((await loadProject(project.id)).project);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Întrebarea nu a putut fi publicată.");
     } finally {
       setBusy(false);
     }
@@ -164,11 +197,32 @@ export function ResearchRoundPanel({
           </p>
         </div>
         {!round || ["failed", "blocked"].includes(round.status) ? (
-          <Button disabled={busy || !baselineReady} onClick={handleStart}>
+          <Button disabled={busy || !baselineReady || !providerConsent} onClick={handleStart}>
             {busy ? "Se pornește..." : round ? "Reîncearcă runda" : "Pornește runda"}
           </Button>
         ) : null}
       </div>
+
+      {(!round || ["failed", "blocked"].includes(round.status)) ? (
+        <div className="provider-consent">
+          <label>
+            <input
+              checked={providerConsent}
+              type="checkbox"
+              onChange={(event) =>
+                setConsentedRevisionId(
+                  event.target.checked ? project.draft.revisionId : null,
+                )
+              }
+            />
+            <span>Confirm că pot trimite această captură către provider după redacția afișată.</span>
+          </label>
+          <details>
+            <summary>Preview date redactate</summary>
+            <pre>{redactionPreview || "Captura nu conține text."}</pre>
+          </details>
+        </div>
+      ) : null}
 
       {round ? (
         <div className="role-grid" aria-label="Starea rolurilor specializate">
@@ -237,13 +291,22 @@ export function ResearchRoundPanel({
       {round?.status === "waiting_operator" ? (
         <section className="research-decisions" aria-labelledby="research-decisions-title">
           <h3 id="research-decisions-title">Revizia ta finală</h3>
-          <p>Răspunde la cardurile blocante. Poți explica sau ajusta orice alegere.</p>
+          <p>Rezolvă fiecare card. Un card neblocant poate fi închis numai cu motiv explicit.</p>
           {round.cards.map((card, index) => (
             <fieldset className="decision-card" key={card.id}>
               <legend>
                 {index + 1}. {card.prompt} {card.blocking ? <span>necesar</span> : null}
               </legend>
               <p>{card.why}</p>
+              <Button
+                disabled={busy || publishedCards.has(card.id)}
+                size="sm"
+                type="button"
+                variant="outline"
+                onClick={() => handlePublishCard(card.id, card.prompt, card.why)}
+              >
+                {publishedCards.has(card.id) ? "Publicată clientului" : "Publică întrebarea clientului"}
+              </Button>
               {card.options?.map((option) => (
                 <label className="decision-option" key={option}>
                   <input
@@ -272,15 +335,28 @@ export function ResearchRoundPanel({
                   }))
                 }
               />
+              {!card.blocking ? (
+                <Textarea
+                  aria-label={`Motiv de dismiss pentru: ${card.prompt}`}
+                  placeholder="Motiv explicit dacă alegi să nu răspunzi"
+                  value={responses[card.id]?.dismissReason ?? ""}
+                  onChange={(event) =>
+                    setResponses((current) => ({
+                      ...current,
+                      [card.id]: { ...current[card.id], dismissReason: event.target.value },
+                    }))
+                  }
+                />
+              ) : null}
             </fieldset>
           ))}
           <div className="research-approval-row">
             <span>
-              {missingBlocking
-                ? `${missingBlocking} răspunsuri blocante lipsesc`
+              {missingCards
+                ? `${missingCards} carduri nerezolvate`
                 : "Revizia poate fi aprobată"}
             </span>
-            <Button disabled={busy || missingBlocking > 0} onClick={handleApprove}>
+            <Button disabled={busy || missingCards > 0} onClick={handleApprove}>
               {busy ? "Se creează revizia..." : "Aprobă și creează revizia"}
             </Button>
           </div>

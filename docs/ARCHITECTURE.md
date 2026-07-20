@@ -307,6 +307,15 @@ POST /api/projects/:id/research-runs
 GET  /api/runs/:id/events
 POST /api/runs/:id/cancel
 POST /api/approval-requests/:id/decisions
+GET  /api/projects/:id/implementation-plan
+POST /api/projects/:id/implementation-plan
+POST /api/projects/:id/implementation-plan/:planId/approve
+GET  /api/projects/:id/work-items
+POST /api/projects/:id/work-items/:workItemId/execute
+GET  /api/projects/:id/work-items/:workItemId/actions
+POST /api/projects/:id/work-items/:workItemId/actions
+GET  /api/projects/:id/work-items/:workItemId/integrate
+POST /api/projects/:id/work-items/:workItemId/integrate
 ```
 
 Requests use CSRF/origin protection, authenticated actor, Zod schemas,
@@ -316,6 +325,28 @@ credentials.
 
 The exact AI-002 schema, DTO allowlist, artifact protocol, recovery behavior,
 and acceptance checks are frozen in `AI002_ARCHITECTURE_PACKET.md`.
+
+## AI-005 executable boundary
+
+Planning is read-only and provider-neutral. Provider output is parsed by a
+strict schema, then a deterministic validator rejects duplicate/missing IDs,
+uncovered requirements, cycles, self-dependencies, missing references,
+unexplained file ownership overlap and missing evidence gates. Only the
+operator approval command materializes task packets.
+
+Execution compiles one immutable ContextPacket containing the exact revision,
+plan digest, policy version, base commit and task packet. A fenced attempt owns
+an external worktree. The provider receives workspace-write but no network,
+web search or approval ability. The control service deletes its temporary
+context file, validates changed paths, scans the diff, runs only declared
+package scripts, requests a separate read-only verifier, creates the isolated
+commit and stores EvidenceBundle.
+
+Integration operates on that exact commit. The CLI adapter validates the local
+branch, pushes with remote SHA readback, creates or reuses the PR and confirms
+the terminal merge commit. Every step is re-evaluated through policy. A Git
+approval toggle can pause push/PR/merge; payment/publication/deploy cannot
+inherit Git evidence or approval.
 
 ## LAN security
 

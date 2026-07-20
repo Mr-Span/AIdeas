@@ -89,14 +89,15 @@ export const researchApprovalResponseSchema = z
     z.object({
       selectedOption: z.string().trim().max(500).optional(),
       answer: z.string().trim().max(4_000).optional(),
+      dismissReason: z.string().trim().min(3).max(1_000).optional(),
     }),
   )
   .refine(
     (responses) =>
       Object.values(responses).every(
-        (response) => response.selectedOption || response.answer,
+        (response) => response.selectedOption || response.answer || response.dismissReason,
       ),
-    "Fiecare răspuns trebuie să conțină o alegere sau o explicație.",
+    "Fiecare card trebuie rezolvat prin alegere, răspuns sau dismiss motivat.",
   );
 
 export type ResearchRole = z.infer<typeof researchRoleSchema>;

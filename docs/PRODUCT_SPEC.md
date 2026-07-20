@@ -227,3 +227,14 @@ Compare 5–10 similar noncritical tasks with and without AIdeas:
 
 Continue, pivot, or stop is decided from those results, not from the amount of
 code built.
+
+## AI-005 pilot result
+
+The operator can now generate a structured final plan from the approved
+research revision, inspect a visual component map and staged task DAG, review
+validator findings and approve the exact digest. Approval creates durable task
+packets. A ready task can run in an isolated worktree, surface failures or
+unresolved blockers, and show its EvidenceBundle. Verified tasks can continue
+through push, PR and merge when policy allows or pause on the exact action that
+needs operator approval. The client projection remains limited to high-level
+plan steps and evidence-backed green status.

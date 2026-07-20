@@ -158,6 +158,10 @@ Gate P3:
 
 ## Phase 4 — Architecture, plan and final review
 
+Implementation status: complete in AI-005. The typed plan, deterministic
+traceability/DAG validator, architecture map, task packets and digest-bound
+operator approval are implemented in `src/server/planning` and the operator UI.
+
 Estimated effort: 2–4 weeks.
 
 Work packets:
@@ -182,6 +186,12 @@ Gate P4:
 ## Phase 5 — End-to-end execution on AIdeas
 
 Task: AI-005. Estimated effort: 4–8 weeks.
+
+Implementation status: the first complete single-repository vertical slice is
+implemented. It includes durable attempts and fencing, immutable ContextPacket,
+external worktree execution, allowlisted checks, independent review,
+EvidenceBundle, isolated branch commit, policy evaluation, approval pause and
+push/PR/merge readback. Reliability scale-out and secured LAN remain Phase 6.
 
 Work packets:
 

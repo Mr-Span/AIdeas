@@ -121,7 +121,7 @@ Evidence:
 
 ## AI-005 — Final plan and autonomous execution gate
 
-Status: next after AI-004 integration.
+Status: implemented on `codex/ai005-plan-execution-gate`; final verification and publication pending.
 
 Acceptance:
 
@@ -130,3 +130,21 @@ Acceptance:
 - unresolved blockers return to the operator;
 - payment/publication/deploy remain impossible without explicit approval bound
   to action digest and policy version.
+
+Implementation result:
+
+- migration 5 stores plans, approvals, task packets, dependencies, immutable
+  ContextPackets, attempts, EvidenceBundles, action approvals and integration
+  receipts;
+- `PlanService` creates a typed architecture and validated dependency DAG from
+  the approved revision; approval is bound to revision, plan digest and policy
+  version;
+- `WorkExecutor` uses a fenced attempt and external workspace-write worktree,
+  enforces file scopes and secret scanning, runs allowlisted checks, requests an
+  independent read-only review, commits on an isolated branch and persists the
+  EvidenceBundle;
+- `IntegrationService` performs push, PR and merge through readback-capable
+  adapters, pauses for digest-bound approval when the Git toggle is on and
+  records the terminal merge receipt;
+- payment, publication and deploy share the same policy service but always
+  require a distinct operator approval for the exact action digest.

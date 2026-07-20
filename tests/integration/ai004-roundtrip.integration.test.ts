@@ -132,6 +132,45 @@ function provider(inputs: ExecutionStart[]): ExecutionProvider {
   };
 }
 
+function flakyProvider(inputs: ExecutionStart[], counts: Map<string, number>): ExecutionProvider {
+  return {
+    async preflight() {
+      return { provider: "codex", status: "ready", version: "fixture", authMode: "chatgpt", detail: "ready" };
+    },
+    async *start(input) {
+      inputs.push(input);
+      const role = roleFromPrompt(input.prompt);
+      const count = (counts.get(role) ?? 0) + 1;
+      counts.set(role, count);
+      yield { type: "started" as const, runId: input.runId, providerRunId: input.runId };
+      if (role === "market_researcher" && count === 1) {
+        yield { type: "failed" as const, runId: input.runId, code: "provider_error" as const, detail: "synthetic role failure", retryable: true };
+        return;
+      }
+      const resultText = JSON.stringify(outputFor(input));
+      yield { type: "completed" as const, runId: input.runId, providerRunId: input.runId, resultText, resultDigest: createHash("sha256").update(resultText).digest("hex"), truncated: false };
+    },
+    async *resume() { throw new Error("not used"); },
+    async cancel(runId) { return { runId, accepted: false, status: "unknown" }; },
+    async inspect(runId) { return { runId, providerRunId: null, status: "unknown", startedAt: null, completedAt: null, errorCode: null }; },
+  };
+}
+
+function usageProvider(): ExecutionProvider {
+  return {
+    async preflight() { return { provider: "codex", status: "ready", version: "fixture", authMode: "chatgpt", detail: "ready" }; },
+    async *start(input) {
+      yield { type: "started" as const, runId: input.runId, providerRunId: input.runId };
+      yield { type: "usage" as const, runId: input.runId, inputTokens: 20, cachedInputTokens: 0, outputTokens: 5, reasoningOutputTokens: 0 };
+      const resultText = JSON.stringify(outputFor(input));
+      yield { type: "completed" as const, runId: input.runId, providerRunId: input.runId, resultText, resultDigest: createHash("sha256").update(resultText).digest("hex"), truncated: false };
+    },
+    async *resume() { throw new Error("not used"); },
+    async cancel(runId) { return { runId, accepted: false, status: "unknown" }; },
+    async inspect(runId) { return { runId, providerRunId: null, status: "unknown", startedAt: null, completedAt: null, errorCode: null }; },
+  };
+}
+
 function submittedProject(fixture: ReturnType<typeof createTestFixture>) {
   const created = fixture.service.createProject({
     displayName: "AI-004 synthetic",
@@ -232,6 +271,7 @@ describe("AI004 specialized research round trip", () => {
         expectedVersion: project.version,
         revisionId: project.draft.revisionId!,
         idempotencyKey: `round-${randomUUID()}`,
+        providerConsentConfirmed: true,
       });
       await service.waitForRound(started.latestRound!.id);
       const waiting = service.getState(project.id).latestRound!;
@@ -289,6 +329,70 @@ describe("AI004 specialized research round trip", () => {
       fixture.cleanup();
       source.cleanup();
       rmSync(workspaceRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("retries only incomplete roles while preserving the original round digest", async () => {
+    const fixture = createTestFixture();
+    const source = createAI003WorkspaceFixture();
+    const workspaceRoot = mkdtempSync(join(tmpdir(), "aideas-ai004-retry-"));
+    const inputs: ExecutionStart[] = [];
+    const counts = new Map<string, number>();
+    const fake = flakyProvider(inputs, counts);
+    const service = new ResearchRoundService({
+      store: fixture.store, projectService: fixture.service, allowedWorkspaceRoot: workspaceRoot,
+      protectedWorkspacePaths: [source.workspace], mainRepositoryPath: source.workspace,
+      defaultProviderKind: "codex_cli", providers: { codex_cli: fake, codex_sdk: fake }, enabled: true,
+    });
+    try {
+      const project = submittedProject(fixture);
+      addBaseline(fixture, project.id, project.draft.revisionId!);
+      const first = await service.start({
+        projectId: project.id, expectedVersion: project.version, revisionId: project.draft.revisionId!,
+        idempotencyKey: `round-${randomUUID()}`, providerConsentConfirmed: true,
+      });
+      await service.waitForRound(first.latestRound!.id);
+      expect(service.getState(project.id).latestRound?.status).toBe("failed");
+      const retry = await service.start({
+        projectId: project.id, expectedVersion: project.version, revisionId: project.draft.revisionId!,
+        idempotencyKey: `round-retry-${randomUUID()}`, providerConsentConfirmed: true,
+      });
+      await service.waitForRound(retry.latestRound!.id);
+      expect(service.getState(project.id).latestRound?.status).toBe("waiting_operator");
+      expect(counts.get("intent_analyst")).toBe(1);
+      expect(counts.get("market_researcher")).toBe(2);
+      expect(counts.get("product_validator")).toBe(1);
+      expect(counts.get("media_strategist")).toBe(1);
+      const rows = fixture.store.database.prepare("SELECT id, round_digest, source_round_id FROM research_rounds WHERE project_id = ? ORDER BY created_at").all(project.id) as Array<Record<string, unknown>>;
+      expect(rows[1].source_round_id).toBe(rows[0].id);
+      expect(rows[1].round_digest).toBe(rows[0].round_digest);
+    } finally {
+      fixture.cleanup(); source.cleanup(); rmSync(workspaceRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("blocks a round when its configured token budget is exceeded", async () => {
+    const fixture = createTestFixture();
+    const source = createAI003WorkspaceFixture();
+    const workspaceRoot = mkdtempSync(join(tmpdir(), "aideas-ai004-budget-"));
+    const fake = usageProvider();
+    const service = new ResearchRoundService({
+      store: fixture.store, projectService: fixture.service, allowedWorkspaceRoot: workspaceRoot,
+      protectedWorkspacePaths: [source.workspace], mainRepositoryPath: source.workspace,
+      defaultProviderKind: "codex_cli", providers: { codex_cli: fake, codex_sdk: fake }, enabled: true,
+      maxTokensPerRound: 10,
+    });
+    try {
+      const project = submittedProject(fixture);
+      addBaseline(fixture, project.id, project.draft.revisionId!);
+      const started = await service.start({
+        projectId: project.id, expectedVersion: project.version, revisionId: project.draft.revisionId!,
+        idempotencyKey: `round-budget-${randomUUID()}`, providerConsentConfirmed: true,
+      });
+      await service.waitForRound(started.latestRound!.id);
+      expect(service.getState(project.id).latestRound).toMatchObject({ status: "blocked" });
+    } finally {
+      fixture.cleanup(); source.cleanup(); rmSync(workspaceRoot, { recursive: true, force: true });
     }
   });
 });
