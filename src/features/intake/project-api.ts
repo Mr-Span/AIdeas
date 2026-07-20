@@ -10,6 +10,9 @@ import type {
   ResearchApprovalResponses,
   ResearchRoundStateDto,
 } from "@/server/research/contracts";
+import type { ImplementationPlanStateDto } from "@/server/planning/contracts";
+import type { WorkControlStateDto } from "@/server/work/contracts";
+import type { IntegrationStateDto } from "@/server/integration/integration-service";
 
 type ApiErrorPayload = {
   error?: { code?: string; message?: string };
@@ -211,6 +214,7 @@ export async function startResearchRound(input: {
   expectedVersion: number;
   revisionId: string;
   idempotencyKey: string;
+  providerConsentConfirmed: true;
 }) {
   const response = await fetch(`/api/projects/${input.projectId}/research-round`, {
     method: "POST",
@@ -220,6 +224,7 @@ export async function startResearchRound(input: {
       expectedVersion: input.expectedVersion,
       revisionId: input.revisionId,
       idempotencyKey: input.idempotencyKey,
+      providerConsentConfirmed: input.providerConsentConfirmed,
     }),
   });
   return responseJson<ResearchRoundStateDto>(response);
@@ -246,6 +251,98 @@ export async function approveResearchRound(input: {
     },
   );
   return responseJson<ResearchRoundStateDto & { project: ClientProjectDto }>(response);
+}
+
+export async function loadImplementationPlan(projectId: string) {
+  const response = await fetch(`/api/projects/${projectId}/implementation-plan`, {
+    cache: "no-store",
+    credentials: "same-origin",
+    headers: { "X-AIdeas-Operator-Token": await getOperatorToken() },
+  });
+  return responseJson<ImplementationPlanStateDto>(response);
+}
+
+export async function startImplementationPlan(input: {
+  projectId: string;
+  expectedVersion: number;
+  revisionId: string;
+  idempotencyKey: string;
+}) {
+  const response = await fetch(`/api/projects/${input.projectId}/implementation-plan`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: await operatorHeaders(),
+    body: JSON.stringify({
+      expectedVersion: input.expectedVersion,
+      revisionId: input.revisionId,
+      idempotencyKey: input.idempotencyKey,
+    }),
+  });
+  return responseJson<ImplementationPlanStateDto>(response);
+}
+
+export async function approveImplementationPlan(input: {
+  projectId: string;
+  planId: string;
+  expectedVersion: number;
+  planDigest: string;
+  policyVersion: string;
+  idempotencyKey: string;
+}) {
+  const response = await fetch(
+    `/api/projects/${input.projectId}/implementation-plan/${input.planId}/approve`,
+    {
+      method: "POST",
+      credentials: "same-origin",
+      headers: await operatorHeaders(),
+      body: JSON.stringify({
+        expectedVersion: input.expectedVersion,
+        planDigest: input.planDigest,
+        policyVersion: input.policyVersion,
+        idempotencyKey: input.idempotencyKey,
+      }),
+    },
+  );
+  return responseJson<ImplementationPlanStateDto>(response);
+}
+
+export async function loadWorkItems(projectId: string) {
+  const response = await fetch(`/api/projects/${projectId}/work-items`, {
+    cache: "no-store", credentials: "same-origin",
+    headers: { "X-AIdeas-Operator-Token": await getOperatorToken() },
+  });
+  return responseJson<WorkControlStateDto>(response);
+}
+
+export async function executeWorkItem(input: { projectId: string; workItemId: string; idempotencyKey: string }) {
+  const response = await fetch(`/api/projects/${input.projectId}/work-items/${input.workItemId}/execute`, {
+    method: "POST", credentials: "same-origin", headers: await operatorHeaders(),
+    body: JSON.stringify({ idempotencyKey: input.idempotencyKey }),
+  });
+  return responseJson<WorkControlStateDto>(response);
+}
+
+export async function loadIntegration(projectId: string, workItemId: string) {
+  const response = await fetch(`/api/projects/${projectId}/work-items/${workItemId}/integrate`, {
+    cache: "no-store", credentials: "same-origin",
+    headers: { "X-AIdeas-Operator-Token": await getOperatorToken() },
+  });
+  return responseJson<{ integration: IntegrationStateDto | null }>(response);
+}
+
+export async function integrateWorkItem(projectId: string, workItemId: string) {
+  const response = await fetch(`/api/projects/${projectId}/work-items/${workItemId}/integrate`, {
+    method: "POST", credentials: "same-origin", headers: await operatorHeaders(), body: "{}",
+  });
+  return responseJson<{ integration: IntegrationStateDto | null }>(response);
+}
+
+export async function approveWorkItemAction(input: { projectId: string; workItemId: string; actionKind: string; target: string }) {
+  const response = await fetch(`/api/projects/${input.projectId}/work-items/${input.workItemId}/actions`, {
+    method: "POST", credentials: "same-origin", headers: await operatorHeaders(),
+    body: JSON.stringify({ actionKind: input.actionKind, target: input.target }),
+  });
+  return responseJson<{ allowed: boolean; requiresApproval: boolean; reasons: string[] }>(response);
 }
 
 export async function appendOperatorMessage(input: {

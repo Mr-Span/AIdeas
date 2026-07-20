@@ -11,18 +11,22 @@ workflow on itself before it is trusted to build other products.
 
 ## Current status
 
-Version `0.1` contains the first real UI vertical:
+The personal single-host pilot now includes:
 
-- card-based idea intake;
-- notes and local-only media selection;
-- explicit known facts and approval policy;
-- desktop and mobile workflow views;
-- truthful disconnected-provider and non-persistence states;
-- local form validation and accessible status feedback.
+- durable SQLite intake, revisions, Markdown/media artifacts and two-way client
+  collaboration;
+- Codex owner-local execution through a provider-neutral server adapter;
+- four bounded research roles with typed evidence, redaction consent, retry and
+  budget controls;
+- a typed architecture plan, deterministic DAG validator, visual plan review
+  and digest-bound operator approval;
+- durable task packets, immutable ContextPackets, isolated worktree execution,
+  allowlisted checks, independent review and EvidenceBundles;
+- policy-gated push, PR and merge with remote readback and explicit approval
+  pause when required.
 
-It does **not** yet persist data, call Codex or Claude, research the web, create
-plans, or execute repositories. The interface labels those boundaries instead
-of simulating success.
+Claude, secured LAN, automatic retention purge, deploy, publication and payment
+adapters are not enabled. Only synthetic data belongs in repository tests.
 
 ## Run locally
 
@@ -56,6 +60,7 @@ browser. See [Security](docs/SECURITY.md) and
 - [Product specification](docs/PRODUCT_SPEC.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Implementation plan](docs/IMPLEMENTATION_PLAN.md)
+- [AI-005 executable architecture packet](docs/AI005_ARCHITECTURE_PACKET.md)
 - [Open decisions](docs/OPEN_QUESTIONS.md)
 - [Data ingest and retention](docs/DATA_INGEST_AND_RETENTION.md)
 - [Naming and clearance status](docs/NAMING.md)

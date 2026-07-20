@@ -11,6 +11,7 @@ import type {
   ExecutionProviderKind,
 } from "@/server/execution/contracts";
 import { WorkspaceSupervisor } from "@/server/execution/workspace-supervisor";
+import { createRedactor } from "@/server/execution/redaction";
 import type { ControlStore } from "@/server/storage/control-store";
 
 import {
@@ -189,6 +190,9 @@ export type ResearchRoundServiceOptions = {
   workspaceSupervisor?: WorkspaceSupervisor;
   clock?: () => Date;
   idFactory?: () => string;
+  maxConcurrentRoles?: number;
+  maxTokensPerRound?: number;
+  maxTokensPerMonth?: number;
 };
 
 export class ResearchRoundService {
@@ -199,6 +203,9 @@ export class ResearchRoundService {
   private readonly providerKind: ExecutionProviderKind;
   private readonly clock: () => Date;
   private readonly idFactory: () => string;
+  private readonly maxConcurrentRoles: number;
+  private readonly maxTokensPerRound: number;
+  private readonly maxTokensPerMonth: number;
   private readonly active = new Map<string, Promise<void>>();
   private reconciled = false;
 
@@ -230,6 +237,9 @@ export class ResearchRoundService {
     };
     this.clock = options.clock ?? (() => new Date());
     this.idFactory = options.idFactory ?? randomUUID;
+    this.maxConcurrentRoles = Math.max(1, Math.min(2, options.maxConcurrentRoles ?? Number(process.env.AIDEAS_RESEARCH_CONCURRENCY ?? 2)));
+    this.maxTokensPerRound = options.maxTokensPerRound ?? Number(process.env.AIDEAS_RESEARCH_ROUND_TOKENS ?? 200_000);
+    this.maxTokensPerMonth = options.maxTokensPerMonth ?? Number(process.env.AIDEAS_RESEARCH_MONTH_TOKENS ?? 2_000_000);
   }
 
   private now() {
@@ -276,8 +286,16 @@ export class ResearchRoundService {
     expectedVersion: number;
     revisionId: string;
     idempotencyKey: string;
+    providerConsentConfirmed: boolean;
   }): Promise<ResearchRoundStateDto> {
     this.reconcileInterrupted();
+    if (input.providerConsentConfirmed !== true) {
+      throw new DomainError(
+        "VALIDATION_ERROR",
+        "Confirmă consimțământul și preview-ul de redacție înainte de provider.",
+        400,
+      );
+    }
     const project = this.projectService.getClientProjection(input.projectId);
     if (
       project.version !== input.expectedVersion ||
@@ -316,10 +334,24 @@ export class ResearchRoundService {
         stableJson({
           expectedVersion: input.expectedVersion,
           revisionId: input.revisionId,
+          providerConsentConfirmed: true,
         }),
         "utf8",
       )
       .digest("hex");
+    const monthStart = new Date(this.clock());
+    monthStart.setUTCDate(1);
+    monthStart.setUTCHours(0, 0, 0, 0);
+    const monthlyUsage = this.store.database
+      .prepare(
+        `SELECT COALESCE(SUM(rr.input_tokens + rr.output_tokens + rr.reasoning_tokens), 0) AS total
+         FROM research_role_runs rr JOIN research_rounds r ON r.id = rr.round_id
+         WHERE r.project_id = ? AND rr.created_at >= ? AND rr.billable = 1`,
+      )
+      .get(input.projectId, monthStart.toISOString()) as Record<string, unknown>;
+    if (Number(monthlyUsage.total) >= this.maxTokensPerMonth) {
+      throw new DomainError("PROVIDER_UNAVAILABLE", "Bugetul lunar de research a fost atins.", 429);
+    }
     const receipt = this.readReceipt(input.projectId, input.idempotencyKey, digest);
     if (receipt) return this.getState(input.projectId);
     const active = this.store.database
@@ -337,21 +369,45 @@ export class ResearchRoundService {
 
     const roundId = this.idFactory();
     const now = this.now();
+    const retrySource = this.store.database
+      .prepare(
+        `SELECT id FROM research_rounds
+         WHERE project_id = ? AND revision_id = ? AND round_digest = ? AND status IN ('failed', 'blocked')
+         ORDER BY updated_at DESC LIMIT 1`,
+      )
+      .get(input.projectId, input.revisionId, digest) as Record<string, unknown> | undefined;
     this.store.transaction(() => {
       this.store.database
         .prepare(
           `INSERT INTO research_rounds(
-             id, project_id, revision_id, status, created_at, updated_at
-           ) VALUES (?, ?, ?, 'running', ?, ?)`,
+             id, project_id, revision_id, status, round_digest, source_round_id, created_at, updated_at
+           ) VALUES (?, ?, ?, 'running', ?, ?, ?, ?)`,
         )
-        .run(roundId, input.projectId, input.revisionId, now, now);
+        .run(roundId, input.projectId, input.revisionId, digest, retrySource ? rowText(retrySource, "id") : null, now, now);
       const insertRole = this.store.database.prepare(
         `INSERT INTO research_role_runs(
            id, round_id, role, provider_kind, status, created_at, updated_at
          ) VALUES (?, ?, ?, ?, 'queued', ?, ?)`,
       );
       for (const role of ROLES) {
-        insertRole.run(this.idFactory(), roundId, role, this.providerKind, now, now);
+        const previous = retrySource
+          ? (this.store.database
+              .prepare("SELECT * FROM research_role_runs WHERE round_id = ? AND role = ? AND status = 'completed'")
+              .get(rowText(retrySource, "id"), role) as RoleRow | undefined)
+          : undefined;
+        if (previous) {
+          this.store.database.prepare(
+            `INSERT INTO research_role_runs(
+               id, round_id, role, provider_kind, provider_run_id, status, output_artifact_digest,
+               input_tokens, output_tokens, reasoning_tokens, billable, created_at, started_at, completed_at, updated_at
+             ) VALUES (?, ?, ?, ?, ?, 'completed', ?, 0, 0, 0, 0, ?, ?, ?, ?)`,
+          ).run(
+            this.idFactory(), roundId, role, rowText(previous, "provider_kind"), nullableText(previous, "provider_run_id"),
+            nullableText(previous, "output_artifact_digest"), now, nullableText(previous, "started_at"), nullableText(previous, "completed_at"), now,
+          );
+        } else {
+          insertRole.run(this.idFactory(), roundId, role, this.providerKind, now, now);
+        }
       }
       this.store.database
         .prepare(
@@ -445,18 +501,28 @@ export class ResearchRoundService {
         400,
       );
     }
-    const unresolved = result.cards.filter(
-      (card) => card.blocking && !responses[card.id],
-    );
+    const unresolved = result.cards.filter((card) => !responses[card.id]);
     if (unresolved.length) {
       throw new DomainError(
         "VALIDATION_ERROR",
-        "Răspunde la toate întrebările blocante înainte de aprobare.",
+        "Rezolvă toate cardurile; cele neblocante pot fi închise numai cu motiv.",
         400,
       );
     }
     for (const card of result.cards) {
       const response = responses[card.id];
+      if (
+        card.blocking &&
+        response?.dismissReason &&
+        !response.selectedOption &&
+        !response.answer
+      ) {
+        throw new DomainError(
+          "VALIDATION_ERROR",
+          "Un card blocant nu poate fi închis prin dismiss.",
+          400,
+        );
+      }
       if (
         card.type === "ab_choice" &&
         response?.selectedOption &&
@@ -477,7 +543,7 @@ export class ResearchRoundService {
         "",
         responses[card.id]?.selectedOption ??
           responses[card.id]?.answer ??
-          "Fără răspuns; card neblocant.",
+          `Dismiss motivat: ${responses[card.id]?.dismissReason}`,
         "",
       ]),
     ].join("\n");
@@ -510,12 +576,32 @@ export class ResearchRoundService {
     revisionId: string,
   ) {
     try {
-      const outputs: RoleOutput[] = [];
-      for (const pair of [ROLES.slice(0, 2), ROLES.slice(2, 4)]) {
-        const batch = await Promise.all(
+      const completed = this.store.database
+        .prepare(
+          `SELECT rr.role, a.storage_key
+           FROM research_role_runs rr JOIN artifacts a ON a.digest = rr.output_artifact_digest
+           WHERE rr.round_id = ? AND rr.status = 'completed'`,
+        )
+        .all(roundId) as Record<string, unknown>[];
+      const outputs: RoleOutput[] = completed.map((row) =>
+        roleOutputSchema.parse(JSON.parse(decoder.decode(this.store.artifacts.read(rowText(row, "storage_key"))))),
+      );
+      const queuedRoles = this.store.database
+        .prepare("SELECT role FROM research_role_runs WHERE round_id = ? AND status = 'queued' ORDER BY role")
+        .all(roundId)
+        .map((row) => rowText(row as Record<string, unknown>, "role") as ResearchRole);
+      for (let index = 0; index < queuedRoles.length; index += this.maxConcurrentRoles) {
+        const pair = queuedRoles.slice(index, index + this.maxConcurrentRoles);
+        const settled = await Promise.allSettled(
           pair.map((role) => this.runRole(roundId, projectId, revisionId, role)),
         );
-        outputs.push(...batch);
+        const rejected = settled.find(
+          (result): result is PromiseRejectedResult => result.status === "rejected",
+        );
+        if (rejected) throw rejected.reason;
+        outputs.push(
+          ...settled.map((result) => (result as PromiseFulfilledResult<RoleOutput>).value),
+        );
       }
       const result = reconcileRoleOutputs(outputs);
       const now = this.now();
@@ -621,6 +707,23 @@ export class ResearchRoundService {
           throw new Error(`blocked:${event.code}:${event.detail}`);
         } else if (event.type === "failed") {
           throw new Error(`${event.code}:${event.detail}`);
+        } else if (event.type === "usage") {
+          this.store.database
+            .prepare(
+              `UPDATE research_role_runs
+               SET input_tokens = ?, output_tokens = ?, reasoning_tokens = ?, updated_at = ?
+               WHERE id = ?`,
+            )
+            .run(event.inputTokens, event.outputTokens, event.reasoningOutputTokens, this.now(), roleRunId);
+          const usage = this.store.database
+            .prepare(
+              `SELECT COALESCE(SUM(rr.input_tokens + rr.output_tokens + rr.reasoning_tokens), 0) AS total
+               FROM research_role_runs rr JOIN research_rounds r ON r.id = rr.round_id
+               WHERE rr.billable = 1 AND r.project_id = ? AND r.revision_id = ?
+                 AND r.round_digest = (SELECT round_digest FROM research_rounds WHERE id = ?)`,
+            )
+            .get(projectId, revisionId, roundId) as Record<string, unknown>;
+          if (Number(usage.total) > this.maxTokensPerRound) throw new Error("blocked:research_round_budget_exceeded");
         } else if (event.type === "completed") {
           const parsed = roleOutputSchema.parse(parseJsonResult(event.resultText));
           if (parsed.role !== role) throw new Error("role_mismatch");
@@ -728,6 +831,11 @@ export class ResearchRoundService {
       .all(revisionId)
       .map((item) => `- ${rowText(item as Record<string, unknown>, "display_name")}`)
       .join("\n");
+    const redactSecrets = createRedactor();
+    const redact = (value: string) =>
+      redactSecrets(value)
+        .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/giu, "[REDACTED_EMAIL]")
+        .replace(/(?<!\d)(?:\+?\d[\d\s().-]{7,}\d)(?!\d)/gu, "[REDACTED_PHONE]");
     return [
       `# Pachet limitat pentru ${role}`,
       "",
@@ -737,13 +845,13 @@ export class ResearchRoundService {
       "",
       "## Captură aprobată pentru analiză",
       "",
-      capture,
+      redact(capture),
       "",
       ...(role === "intent_analyst"
         ? []
-        : ["## Raportul de bază AI-003", "", baselineText, ""]),
+        : ["## Raportul de bază AI-003", "", redact(baselineText), ""]),
       ...(role === "media_strategist"
-        ? ["## Inventar media (nume, fără conținut binar)", "", media || "_Fără media_", ""]
+        ? ["## Inventar media (nume, fără conținut binar)", "", redact(media) || "_Fără media_", ""]
         : []),
     ].join("\n");
   }

@@ -51,6 +51,8 @@ import {
 } from "./project-api";
 import { ProjectSidebar } from "./project-sidebar";
 import { ResearchRoundPanel } from "./research-round-panel";
+import { ImplementationPlanPanel } from "./implementation-plan-panel";
+import { WorkExecutionPanel } from "./work-execution-panel";
 import {
   knownFacts,
   projectWorkflowStages,
@@ -795,6 +797,26 @@ export function IntakeWorkspace() {
           {project ? (
             <ResearchRoundPanel
               baselineReady={latestResearchRun?.status === "completed"}
+              project={project}
+              onProjectChange={(nextProject) => {
+                setProject(nextProject);
+                setProjectId(nextProject.id);
+              }}
+            />
+          ) : null}
+
+          {project ? (
+            <ImplementationPlanPanel
+              project={project}
+              onProjectChange={(nextProject) => {
+                setProject(nextProject);
+                setProjectId(nextProject.id);
+              }}
+            />
+          ) : null}
+
+          {project ? (
+            <WorkExecutionPanel
               project={project}
               onProjectChange={(nextProject) => {
                 setProject(nextProject);

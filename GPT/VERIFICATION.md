@@ -281,3 +281,41 @@
   same local adapters validated in AI-003 plus synthetic AI-004 provider-port
   fixtures. Interrupted multi-role rounds fail visibly and require an explicit
   new round; partial-role resume remains a product decision.
+
+## 2026-07-20 — AI-005 final plan and autonomous execution gate
+
+- Migration 5 was exercised on fresh SQLite stores and now includes plan,
+  approval, work DAG, ContextPacket, attempt/lease, EvidenceBundle, action
+  approval and integration receipt records. AI-004 round digest, retry lineage,
+  token usage and billable-copy fields are included in the same migration.
+- Plan validation fixtures cover valid traceability plus missing references,
+  cycles and unexplained file ownership overlap. Policy fixtures cover green
+  autonomous Git, stale base, failed secret scan and digest-bound deploy
+  approval.
+- The plan round-trip fixture generated a typed plan through the provider port,
+  approved the exact digest and policy version, materialized two task packets
+  and one dependency, and updated the client-safe plan step only after approval.
+- The work-execution fixture changed a synthetic repo in an external worktree,
+  used workspace-write for the worker and read-only for a separate verifier,
+  created an isolated commit/branch, kept the protected checkout clean and
+  persisted EvidenceBundle. A second fixture inserted a secret-shaped
+  `API_KEY`; the attempt was blocked before commit and produced no evidence.
+- The synthetic GitHub adapter exercised policy evaluation, push/PR/merge
+  ordering and terminal merge receipt. Deploy remained denied until a distinct
+  action approval was persisted.
+- AI-004 hardening fixtures prove retry only reruns incomplete roles on the same
+  round digest and that the per-round token budget blocks provider work. The
+  test exposed a parallel cleanup race; `Promise.allSettled` now waits for both
+  roles before the round becomes terminal.
+- `pnpm.cmd verify`: pass with lint, TypeScript, 21 files / 68 tests and a
+  warning-free Next.js production build exposing all AI-005 routes.
+- Initial six-test Playwright run used two workers against one SQLite/dev-server
+  instance; 5/6 passed and the intake hydration flow raced before its first
+  controlled input update. The harness now uses one worker, matching the
+  single-writer architecture. The two intake tests passed alone, then final
+  `pnpm.cmd test:e2e` passed 6/6 Chromium tests.
+- `pnpm.cmd audit --prod`: no known vulnerabilities. `git diff --check`: pass.
+- Owner-local live AI-005 contract: 1/1 passed in 32.30s. The installed Codex
+  CLI returned a schema-valid acyclic implementation plan from a synthetic
+  read-only repo with network/web disabled; the fixture checkout remained
+  clean. No client data was used.

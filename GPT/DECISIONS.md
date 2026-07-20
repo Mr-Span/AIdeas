@@ -94,3 +94,26 @@ collision decision and formal clearance.
 
 The operator has chosen to keep `Faur` temporarily and replace it later. No
 public rebrand is authorized during AI-002.
+
+## 2026-07-20 — AI-004 data and retry policy
+
+Raw research remains operator-only. An operator may explicitly publish a
+selected clarification into the public client thread. Starting a specialized
+round requires consent after a redaction preview; the server applies the same
+secret, email and phone redaction before building provider context. Interrupted
+rounds retry only incomplete roles and remain bound to the original round
+digest. Concurrency is capped at two and token budgets are enforced per round
+and calendar month. Every nonblocking card requires either an answer/choice or
+an explicit dismiss reason.
+
+## 2026-07-20 — AI-005 execution and integration policy
+
+The final plan is immutable after approval and is signed by project revision,
+plan digest and `aideas-policy-v1`. Task packets use server-owned verification
+commands and evidence requirements. Workers may edit only declared file scopes
+inside an external worktree; they cannot commit or trigger external actions.
+The control service performs the isolated commit only after checks, secret scan
+and independent review. Push, PR and merge may continue automatically when the
+project toggle is off; with the toggle on, the integration run pauses at the
+exact action target. Payment, publication and deploy always pause for a
+separate action approval.

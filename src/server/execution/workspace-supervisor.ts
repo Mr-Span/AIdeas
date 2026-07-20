@@ -61,7 +61,11 @@ export class WorkspaceSupervisor {
     }
   }
 
-  async create(input: { runId: string; contextMarkdown: string }) {
+  async create(input: {
+    runId: string;
+    contextMarkdown: string;
+    contextFileName?: "AIDEAS_RESEARCH_CONTEXT.md" | "AIDEAS_PLAN_CONTEXT.md" | "AIDEAS_TASK_CONTEXT.md";
+  }) {
     if (!/^[a-f0-9-]{36}$/i.test(input.runId)) {
       throw new WorkspacePolicyError("Run identifier is not valid for a worktree.");
     }
@@ -91,7 +95,7 @@ export class WorkspaceSupervisor {
       await writeFile(
         join(
           /* turbopackIgnore: true */ workspacePath,
-          "AIDEAS_RESEARCH_CONTEXT.md",
+          input.contextFileName ?? "AIDEAS_RESEARCH_CONTEXT.md",
         ),
         input.contextMarkdown,
         { encoding: "utf8", flag: "wx" },

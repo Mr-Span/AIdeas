@@ -249,4 +249,165 @@ export const migrations: Migration[] = [
         ON research_role_runs(round_id, role);
     `,
   },
+  {
+    version: 5,
+    sql: `
+      ALTER TABLE research_rounds ADD COLUMN round_digest TEXT;
+      ALTER TABLE research_rounds ADD COLUMN source_round_id TEXT REFERENCES research_rounds(id) ON DELETE RESTRICT;
+      ALTER TABLE research_role_runs ADD COLUMN input_tokens INTEGER NOT NULL DEFAULT 0 CHECK (input_tokens >= 0);
+      ALTER TABLE research_role_runs ADD COLUMN output_tokens INTEGER NOT NULL DEFAULT 0 CHECK (output_tokens >= 0);
+      ALTER TABLE research_role_runs ADD COLUMN reasoning_tokens INTEGER NOT NULL DEFAULT 0 CHECK (reasoning_tokens >= 0);
+      ALTER TABLE research_role_runs ADD COLUMN billable INTEGER NOT NULL DEFAULT 1 CHECK (billable IN (0, 1));
+
+      CREATE TABLE implementation_plans (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE RESTRICT,
+        revision_id TEXT NOT NULL REFERENCES project_revisions(id) ON DELETE RESTRICT,
+        research_round_id TEXT NOT NULL REFERENCES research_rounds(id) ON DELETE RESTRICT,
+        status TEXT NOT NULL CHECK (
+          status IN ('generating', 'waiting_operator', 'blocked', 'failed', 'approved', 'superseded')
+        ),
+        provider_kind TEXT NOT NULL CHECK (provider_kind IN ('codex_sdk', 'codex_cli')),
+        provider_run_id TEXT,
+        workspace_path TEXT,
+        plan_json TEXT,
+        validation_json TEXT NOT NULL DEFAULT '[]',
+        plan_digest TEXT CHECK (plan_digest IS NULL OR length(plan_digest) = 64),
+        base_commit TEXT NOT NULL,
+        policy_version TEXT NOT NULL,
+        error_detail TEXT,
+        approved_at TEXT,
+        created_at TEXT NOT NULL,
+        completed_at TEXT,
+        updated_at TEXT NOT NULL
+      ) STRICT;
+
+      CREATE TABLE plan_approvals (
+        plan_id TEXT PRIMARY KEY REFERENCES implementation_plans(id) ON DELETE RESTRICT,
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE RESTRICT,
+        revision_id TEXT NOT NULL REFERENCES project_revisions(id) ON DELETE RESTRICT,
+        plan_digest TEXT NOT NULL CHECK (length(plan_digest) = 64),
+        policy_version TEXT NOT NULL,
+        actor_kind TEXT NOT NULL CHECK (actor_kind = 'operator'),
+        approved_at TEXT NOT NULL
+      ) STRICT;
+
+      CREATE TABLE work_items (
+        id TEXT PRIMARY KEY,
+        plan_id TEXT NOT NULL REFERENCES implementation_plans(id) ON DELETE RESTRICT,
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE RESTRICT,
+        canonical_key TEXT NOT NULL,
+        title TEXT NOT NULL,
+        packet_json TEXT NOT NULL,
+        status TEXT NOT NULL CHECK (
+          status IN ('blocked', 'queued', 'ready', 'running', 'verifying', 'verified', 'integrated', 'failed')
+        ),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        UNIQUE(plan_id, canonical_key)
+      ) STRICT;
+
+      CREATE TABLE work_item_dependencies (
+        work_item_id TEXT NOT NULL REFERENCES work_items(id) ON DELETE RESTRICT,
+        dependency_id TEXT NOT NULL REFERENCES work_items(id) ON DELETE RESTRICT,
+        PRIMARY KEY(work_item_id, dependency_id),
+        CHECK (work_item_id <> dependency_id)
+      ) STRICT;
+
+      CREATE TABLE context_packets (
+        id TEXT PRIMARY KEY,
+        work_item_id TEXT NOT NULL REFERENCES work_items(id) ON DELETE RESTRICT,
+        plan_id TEXT NOT NULL REFERENCES implementation_plans(id) ON DELETE RESTRICT,
+        revision_id TEXT NOT NULL REFERENCES project_revisions(id) ON DELETE RESTRICT,
+        base_commit TEXT NOT NULL,
+        packet_digest TEXT NOT NULL CHECK (length(packet_digest) = 64),
+        packet_json TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        UNIQUE(work_item_id, packet_digest)
+      ) STRICT;
+
+      CREATE TABLE work_attempts (
+        id TEXT PRIMARY KEY,
+        work_item_id TEXT NOT NULL REFERENCES work_items(id) ON DELETE RESTRICT,
+        attempt_number INTEGER NOT NULL CHECK (attempt_number > 0),
+        status TEXT NOT NULL CHECK (
+          status IN ('running', 'verifying', 'verified', 'failed', 'blocked', 'expired')
+        ),
+        lease_token TEXT NOT NULL,
+        lease_expires_at TEXT NOT NULL,
+        context_packet_id TEXT NOT NULL REFERENCES context_packets(id) ON DELETE RESTRICT,
+        workspace_path TEXT,
+        provider_run_id TEXT,
+        verifier_run_id TEXT,
+        evidence_id TEXT,
+        error_detail TEXT,
+        created_at TEXT NOT NULL,
+        completed_at TEXT,
+        updated_at TEXT NOT NULL,
+        UNIQUE(work_item_id, attempt_number)
+      ) STRICT;
+
+      CREATE TABLE evidence_bundles (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE RESTRICT,
+        work_item_id TEXT NOT NULL REFERENCES work_items(id) ON DELETE RESTRICT,
+        plan_id TEXT NOT NULL REFERENCES implementation_plans(id) ON DELETE RESTRICT,
+        revision_id TEXT NOT NULL REFERENCES project_revisions(id) ON DELETE RESTRICT,
+        plan_digest TEXT NOT NULL CHECK (length(plan_digest) = 64),
+        policy_version TEXT NOT NULL,
+        base_commit TEXT NOT NULL,
+        current_base_commit TEXT NOT NULL,
+        diff_digest TEXT NOT NULL CHECK (length(diff_digest) = 64),
+        commit_digest TEXT,
+        bundle_json TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      ) STRICT;
+
+      CREATE TABLE action_approvals (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE RESTRICT,
+        action_kind TEXT NOT NULL CHECK (
+          action_kind IN ('commit', 'push', 'pull_request', 'merge', 'payment', 'publication', 'deploy')
+        ),
+        action_digest TEXT NOT NULL CHECK (length(action_digest) = 64),
+        policy_version TEXT NOT NULL,
+        target TEXT NOT NULL,
+        actor_kind TEXT NOT NULL CHECK (actor_kind = 'operator'),
+        approved_at TEXT NOT NULL,
+        UNIQUE(project_id, action_kind, action_digest, policy_version)
+      ) STRICT;
+
+      CREATE TABLE integration_runs (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE RESTRICT,
+        work_item_id TEXT NOT NULL REFERENCES work_items(id) ON DELETE RESTRICT,
+        evidence_id TEXT NOT NULL REFERENCES evidence_bundles(id) ON DELETE RESTRICT,
+        status TEXT NOT NULL CHECK (
+          status IN ('running', 'waiting_approval', 'integrated', 'failed')
+        ),
+        branch_name TEXT NOT NULL,
+        repository_name TEXT,
+        base_branch TEXT,
+        pull_request_url TEXT,
+        merge_commit TEXT,
+        pending_action_kind TEXT,
+        pending_action_target TEXT,
+        error_detail TEXT,
+        created_at TEXT NOT NULL,
+        completed_at TEXT,
+        updated_at TEXT NOT NULL
+      ) STRICT;
+
+      CREATE INDEX implementation_plans_project_updated
+        ON implementation_plans(project_id, updated_at DESC);
+      CREATE INDEX work_items_plan_status
+        ON work_items(plan_id, status, canonical_key);
+      CREATE INDEX evidence_work_item_created
+        ON evidence_bundles(work_item_id, created_at DESC);
+      CREATE INDEX work_attempts_item_number
+        ON work_attempts(work_item_id, attempt_number DESC);
+      CREATE INDEX integration_runs_item_updated
+        ON integration_runs(work_item_id, updated_at DESC);
+    `,
+  },
 ];
