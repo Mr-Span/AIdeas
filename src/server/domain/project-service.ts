@@ -671,8 +671,8 @@ export class ProjectService {
         this.store.database
           .prepare(
             `UPDATE plan_steps
-             SET status = 'blocked',
-                 next_action = 'Așteptăm conectarea providerului pentru cercetare.',
+             SET status = 'not_started',
+                 next_action = 'Analiza locală poate fi pornită după trimitere.',
                  evidence_ref = NULL, verified_at = NULL, updated_at = ?
              WHERE id = ?`,
           )

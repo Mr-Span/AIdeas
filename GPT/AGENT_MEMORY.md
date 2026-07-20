@@ -29,12 +29,14 @@
 - Provider boundary: implement Codex owner-local first on the trusted host.
   Claude API/product mode follows only after the common contract is stable.
 - Public license: MIT, copyright 2026 Mr-Span.
-- Current code: AI-002 durable SQLite/artifact persistence, an eight-question
-  intake with answer-derived progress, two-way public collaboration, and the
-  five-step tracker are integrated. Providers remain truthfully disconnected
-  and no agent is executed yet.
-- Current priority: AI-003 Codex owner-local feasibility and provider contract.
-  Secured LAN identity/transport and final purge semantics are explicit backlog.
+- Current code: AI-002 durable intake plus AI-003 owner-local execution are
+  integrated. The operator-only route persists a broker ledger, creates an
+  external read-only worktree, runs Codex CLI through the host ChatGPT login,
+  stores the final report as an artifact, and returns safe status/result data to
+  the operator UI. The SDK adapter remains available explicitly.
+- Current priority: AI-004 specialized research roles, proposal deduplication,
+  evidence structure, and the human clarification round trip. Secured LAN
+  identity/transport and final purge semantics remain explicit backlog.
 - Verification: `pnpm.cmd verify`, then focused Playwright tests.
 - Secrets: no `.env` files, API keys, tokens, login stores, databases, client
   content, or runtime artifacts in Git.

@@ -18,7 +18,7 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   webServer: {
-    command: "pnpm dev --hostname 127.0.0.1 --port 3101",
+    command: "pnpm dev --port 3101",
     env: {
       AIDEAS_DATA_DIR: e2eDataRoot,
     },

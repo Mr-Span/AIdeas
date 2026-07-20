@@ -22,7 +22,7 @@ test("persists the intake, supports two-way updates, and reports truthful progre
     page.getByRole("heading", { level: 1, name: "Conturează ideea" }),
   ).toBeVisible();
   const providerStatus = page.getByLabel("Starea providerilor");
-  await expect(providerStatus.getByText("Codex neconectat")).toBeVisible();
+  await expect(providerStatus.getByText("Codex neverificat")).toBeVisible();
   await expect(providerStatus.getByText("Claude neconectat")).toBeVisible();
   await expect(page.getByRole("switch")).not.toBeChecked();
   await expect(page.getByText("0 din 8 clarificări", { exact: true })).toBeVisible();
@@ -62,9 +62,10 @@ test("persists the intake, supports two-way updates, and reports truthful progre
   await page.getByRole("button", { name: "Trimite pentru analiză" }).click();
 
   await expect(
-    page.getByText("Revizia este salvată, dar Cercetarea este blocată", {
-      exact: false,
-    }),
+    page.locator(".submission-notice").getByText(
+      "Execuția Codex locală este dezactivată",
+      { exact: false },
+    ),
   ).toBeVisible();
 
   const workflow = page.locator(".workflow-rail");

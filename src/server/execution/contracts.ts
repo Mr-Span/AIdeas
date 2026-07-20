@@ -21,6 +21,8 @@ export const executionErrorCodeSchema = z.enum([
   "provider_error",
 ]);
 
+export const executionProviderKindSchema = z.enum(["codex_sdk", "codex_cli"]);
+
 export const capabilityGrantSchema = z.object({
   sandboxMode: z.enum(["read-only", "workspace-write"]),
   networkAccess: z.boolean(),
@@ -37,7 +39,16 @@ export const executionStartSchema = z.object({
   capabilityGrant: capabilityGrantSchema,
 });
 
+export const executionResumeSchema = executionStartSchema.extend({
+  providerRunId: z.string().uuid(),
+});
+
 export const executionEventSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("process_started"),
+    runId: z.string().uuid(),
+    processId: z.number().int().positive(),
+  }),
   z.object({
     type: z.literal("started"),
     runId: z.string().uuid(),
@@ -87,8 +98,10 @@ export const executionEventSchema = z.discriminatedUnion("type", [
 ]);
 
 export type ExecutionErrorCode = z.infer<typeof executionErrorCodeSchema>;
+export type ExecutionProviderKind = z.infer<typeof executionProviderKindSchema>;
 export type CapabilityGrant = z.infer<typeof capabilityGrantSchema>;
 export type ExecutionStart = z.infer<typeof executionStartSchema>;
+export type ExecutionResume = z.infer<typeof executionResumeSchema>;
 export type ExecutionEvent = z.infer<typeof executionEventSchema>;
 
 export type ProviderHealth = {
@@ -102,9 +115,11 @@ export type ProviderHealth = {
 
 export type ProviderRunStatus =
   | "unknown"
+  | "starting"
   | "blocked"
   | "running"
   | "cancelling"
+  | "resume_available"
   | "cancelled"
   | "timed_out"
   | "completed"
@@ -128,6 +143,7 @@ export type CancelReceipt = {
 export interface ExecutionProvider {
   preflight(): Promise<ProviderHealth>;
   start(input: ExecutionStart): AsyncIterable<ExecutionEvent>;
+  resume(input: ExecutionResume): AsyncIterable<ExecutionEvent>;
   cancel(runId: string): Promise<CancelReceipt>;
   inspect(runId: string): Promise<ProviderRunState>;
 }

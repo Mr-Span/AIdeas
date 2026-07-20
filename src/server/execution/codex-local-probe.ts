@@ -35,7 +35,10 @@ export function buildCodexEnvironment(
   return environment;
 }
 
-function runCodexCommand(args: readonly string[], environment: Record<string, string>) {
+export function runCodexCommand(
+  args: readonly string[],
+  environment: Record<string, string>,
+) {
   const command = process.platform === "win32" ? environment.COMSPEC ?? "cmd.exe" : "codex";
   const commandArgs =
     process.platform === "win32"

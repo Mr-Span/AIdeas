@@ -125,4 +125,81 @@ export const migrations: Migration[] = [
         ON plan_steps(project_id, position);
     `,
   },
+  {
+    version: 2,
+    sql: `
+      CREATE TABLE execution_runs (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE RESTRICT,
+        revision_id TEXT NOT NULL REFERENCES project_revisions(id) ON DELETE RESTRICT,
+        provider_kind TEXT NOT NULL CHECK (provider_kind IN ('codex_sdk', 'codex_cli')),
+        purpose TEXT NOT NULL CHECK (purpose IN ('research')),
+        workspace_path TEXT NOT NULL,
+        prompt_artifact_digest TEXT NOT NULL REFERENCES artifacts(digest),
+        status TEXT NOT NULL CHECK (
+          status IN (
+            'starting',
+            'running',
+            'cancelling',
+            'resume_available',
+            'blocked',
+            'cancelled',
+            'timed_out',
+            'completed',
+            'failed'
+          )
+        ),
+        provider_run_id TEXT,
+        output_artifact_digest TEXT REFERENCES artifacts(digest),
+        error_code TEXT,
+        error_detail TEXT,
+        created_at TEXT NOT NULL,
+        started_at TEXT,
+        last_event_at TEXT NOT NULL,
+        completed_at TEXT,
+        updated_at TEXT NOT NULL
+      ) STRICT;
+
+      CREATE TABLE execution_events (
+        id TEXT PRIMARY KEY,
+        run_id TEXT NOT NULL REFERENCES execution_runs(id) ON DELETE RESTRICT,
+        sequence INTEGER NOT NULL CHECK (sequence > 0),
+        event_type TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        UNIQUE(run_id, sequence)
+      ) STRICT;
+
+      CREATE TABLE execution_provider_threads (
+        provider_run_id TEXT PRIMARY KEY,
+        provider_kind TEXT NOT NULL CHECK (provider_kind IN ('codex_sdk', 'codex_cli')),
+        run_id TEXT NOT NULL REFERENCES execution_runs(id) ON DELETE RESTRICT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      ) STRICT;
+
+      CREATE TABLE execution_terminal_receipts (
+        run_id TEXT PRIMARY KEY REFERENCES execution_runs(id) ON DELETE RESTRICT,
+        terminal_type TEXT NOT NULL CHECK (terminal_type IN ('completed', 'failed', 'blocked', 'resume_available')),
+        payload_json TEXT NOT NULL,
+        result_digest TEXT,
+        created_at TEXT NOT NULL
+      ) STRICT;
+
+      CREATE INDEX execution_runs_project_updated
+        ON execution_runs(project_id, updated_at DESC);
+      CREATE INDEX execution_runs_status_updated
+        ON execution_runs(status, updated_at DESC);
+      CREATE INDEX execution_events_run_sequence
+        ON execution_events(run_id, sequence);
+    `,
+  },
+  {
+    version: 3,
+    sql: `
+      ALTER TABLE execution_runs
+        ADD COLUMN provider_pid INTEGER
+        CHECK (provider_pid IS NULL OR provider_pid > 0);
+    `,
+  },
 ];

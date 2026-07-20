@@ -33,6 +33,7 @@ import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import type { ClientProjectDto } from "@/server/domain/contracts";
+import type { ResearchStateDto } from "@/server/execution/broker";
 
 import { BottomNavigation } from "./bottom-navigation";
 import { CollaborationPanel } from "./collaboration-panel";
@@ -41,8 +42,11 @@ import {
   appendOperatorMessage,
   createProject,
   loadProject,
+  loadResearchState,
   ProjectApiError,
+  resumeResearch,
   saveDraft,
+  startResearch,
   submitProject,
 } from "./project-api";
 import { ProjectSidebar } from "./project-sidebar";
@@ -119,6 +123,8 @@ export function IntakeWorkspace() {
   const [fileInputVersion, setFileInputVersion] = useState(0);
   const [approvalRequired, setApprovalRequired] = useState(false);
   const [project, setProject] = useState<ClientProjectDto | null>(null);
+  const [researchState, setResearchState] =
+    useState<ResearchStateDto | null>(null);
   const [projectId, setProjectId] = useState<string | null>(null);
   const [lastSavedFingerprint, setLastSavedFingerprint] = useState("");
   const [validationError, setValidationError] = useState("");
@@ -127,6 +133,7 @@ export function IntakeWorkspace() {
   const [isSaving, setIsSaving] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [isManagingResearch, setIsManagingResearch] = useState(false);
   const [collaborationMessage, setCollaborationMessage] = useState("");
   const [liveMessage, setLiveMessage] = useState(
     "Spațiul local este pregătit.",
@@ -134,7 +141,7 @@ export function IntakeWorkspace() {
 
   const submitted = project?.draft.submitted ?? false;
   const fileCount = selectedFiles.length;
-  const busy = isLoading || isSaving || isSubmitting;
+  const busy = isLoading || isSaving || isSubmitting || isManagingResearch;
   const stages = project
     ? projectWorkflowStages(project)
     : workflowStages(false);
@@ -149,6 +156,17 @@ export function IntakeWorkspace() {
     clarificationAnswers.concept?.trim() ||
     clarificationAnswers.audience_problem?.trim() ||
     "";
+  const codexHealth = researchState?.providerHealth;
+  const codexStatus = codexHealth?.status === "ready" ? "ready" : "blocked";
+  const codexLabel =
+    codexHealth?.status === "ready"
+      ? "Codex conectat local"
+      : codexHealth
+        ? "Codex indisponibil"
+        : "Codex neverificat";
+  const researchStep = stages.find((stage) => stage.kind === "research");
+  const latestResearchRun = researchState?.latestRun;
+  const activeResearchRunId = researchState?.activeRun?.runId ?? null;
 
   useEffect(() => {
     let cancelled = false;
@@ -191,6 +209,13 @@ export function IntakeWorkspace() {
         setLiveMessage(
           `Proiectul a fost încărcat din SQLite, versiunea ${loadedProject.version}.`,
         );
+        void loadResearchState(loadedProject.id)
+          .then((state) => {
+            if (cancelled) return;
+            setResearchState(state);
+            setProject(state.project);
+          })
+          .catch(() => undefined);
       })
       .catch((error: unknown) => {
         if (cancelled) return;
@@ -207,6 +232,19 @@ export function IntakeWorkspace() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!projectId || !activeResearchRunId) return;
+    const timer = window.setInterval(() => {
+      void loadResearchState(projectId)
+        .then((state) => {
+          setResearchState(state);
+          setProject(state.project);
+        })
+        .catch(() => undefined);
+    }, 2_000);
+    return () => window.clearInterval(timer);
+  }, [projectId, activeResearchRunId]);
 
   function handleFilesSelected(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
@@ -228,6 +266,7 @@ export function IntakeWorkspace() {
     window.localStorage.removeItem(PROJECT_POINTER_KEY);
     clearPendingKey("create");
     setProject(null);
+    setResearchState(null);
     setProjectId(null);
     setProjectName("Proiect fără titlu");
     setClarificationAnswers(emptyClarificationAnswers());
@@ -382,14 +421,90 @@ export function IntakeWorkspace() {
           files: [],
         }),
       );
-      setLiveMessage(
-        "Revizia a fost salvată și trimisă. Niciun agent nu a pornit deoarece providerul nu este conectat.",
+      const revisionId = result.project.draft.revisionId;
+      if (!revisionId) {
+        throw new ProjectApiError(
+          "Revizia trimisă nu are un identificator pentru analiză.",
+          "MISSING_REVISION",
+          500,
+        );
+      }
+      const researchCommand = `research.${result.project.id}`;
+      const researchKey = idempotencyKey(
+        researchCommand,
+        `${result.project.version}:${revisionId}`,
       );
+      try {
+        const state = await startResearch({
+          projectId: result.project.id,
+          expectedVersion: result.project.version,
+          revisionId,
+          idempotencyKey: researchKey,
+        });
+        clearPendingKey(researchCommand);
+        setResearchState(state);
+        setProject(state.project);
+        setLiveMessage(
+          state.activeRun
+            ? "Codex a pornit analiza locală. Progresul este urmărit în SQLite."
+            : state.latestRun?.status === "completed"
+              ? "Cercetarea s-a încheiat și rezultatul este salvat ca artefact."
+              : "Revizia este salvată, dar cercetarea nu a putut porni.",
+        );
+      } catch (researchError) {
+        setOperationError(
+          `Revizia a fost salvată, dar cercetarea nu a pornit: ${errorMessage(researchError)}`,
+        );
+        setLiveMessage("Revizia este sigură în SQLite; cercetarea poate fi reluată.");
+      }
     } catch (error) {
       setOperationError(errorMessage(error));
       setLiveMessage("Trimiterea proiectului a eșuat.");
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleResearchAction() {
+    if (!projectId || !project?.draft.revisionId) return;
+    setIsManagingResearch(true);
+    setOperationError("");
+    try {
+      const resumable =
+        researchState?.latestRun?.status === "resume_available"
+          ? researchState.latestRun
+          : null;
+      const resumeCommand = resumable
+        ? `research.resume.${projectId}.${resumable.runId}`
+        : null;
+      const state = resumable
+        ? await resumeResearch({
+            projectId,
+            runId: resumable.runId,
+            idempotencyKey: idempotencyKey(
+              resumeCommand!,
+              resumable.updatedAt,
+            ),
+          })
+        : await startResearch({
+            projectId,
+            expectedVersion: project.version,
+            revisionId: project.draft.revisionId,
+            idempotencyKey: idempotencyKey(
+              `research.retry.${projectId}`,
+              `${project.version}:${project.draft.revisionId}:${researchState?.latestRun?.runId ?? "first"}`,
+            ),
+          });
+      if (resumeCommand) clearPendingKey(resumeCommand);
+      else clearPendingKey(`research.retry.${projectId}`);
+      setResearchState(state);
+      setProject(state.project);
+      setLiveMessage("Analiza locală a fost pornită și este urmărită în SQLite.");
+    } catch (error) {
+      setOperationError(errorMessage(error));
+      setLiveMessage("Analiza locală nu a putut fi pornită.");
+    } finally {
+      setIsManagingResearch(false);
     }
   }
 
@@ -436,7 +551,9 @@ export function IntakeWorkspace() {
         <div className="wordmark">AIdeas</div>
         <div className="header-project-name">{projectName}</div>
         <div className="provider-status-list" aria-label="Starea providerilor">
-          <span className="provider-status">Codex neconectat</span>
+          <span className="provider-status" data-status={codexStatus}>
+            {codexLabel}
+          </span>
           <span className="provider-status">Claude neconectat</span>
         </div>
         <details className="mobile-menu">
@@ -444,7 +561,9 @@ export function IntakeWorkspace() {
             <Menu aria-hidden="true" size={22} />
           </summary>
           <div className="mobile-menu-panel">
-            <p className="provider-status">Codex neconectat</p>
+            <p className="provider-status" data-status={codexStatus}>
+              {codexLabel}
+            </p>
             <p className="provider-status">Claude neconectat</p>
           </div>
         </details>
@@ -640,9 +759,36 @@ export function IntakeWorkspace() {
 
           {submitted ? (
             <div className="submission-notice" role="status">
-              Revizia este salvată, dar Cercetarea este blocată: niciun provider
-              nu este conectat și nu a pornit niciun agent.
+              <span>
+                {researchStep?.status === "in_progress"
+                  ? "Codex analizează proiectul. Evenimentele sigure sunt salvate în SQLite."
+                  : researchStep?.status === "verified"
+                    ? "Cercetarea s-a încheiat și rezultatul este salvat ca artefact verificabil."
+                    : latestResearchRun?.status === "resume_available"
+                      ? "Serverul a fost repornit. Cercetarea poate fi reluată explicit."
+                      : latestResearchRun?.errorDetail ??
+                        "Revizia este salvată. Cercetarea așteaptă pornirea providerului local."}
+              </span>
+              {!researchState?.activeRun && researchStep?.status !== "verified" ? (
+                <Button
+                  disabled={busy}
+                  size="sm"
+                  variant="outline"
+                  onClick={handleResearchAction}
+                >
+                  {latestResearchRun?.status === "resume_available"
+                    ? "Reia analiza"
+                    : "Pornește analiza"}
+                </Button>
+              ) : null}
             </div>
+          ) : null}
+
+          {latestResearchRun?.resultText ? (
+            <section className="research-result" aria-labelledby="research-result-title">
+              <h2 id="research-result-title">Rezultatul cercetării</h2>
+              <pre>{latestResearchRun.resultText}</pre>
+            </section>
           ) : null}
 
           {operationError ? (
