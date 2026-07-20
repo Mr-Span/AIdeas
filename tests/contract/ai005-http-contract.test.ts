@@ -4,6 +4,7 @@ import { POST as approvePlan } from "../../src/app/api/projects/[projectId]/impl
 import { POST as startPlan } from "../../src/app/api/projects/[projectId]/implementation-plan/route";
 import { POST as executeWorkItem } from "../../src/app/api/projects/[projectId]/work-items/[workItemId]/execute/route";
 import { POST as integrateWorkItem } from "../../src/app/api/projects/[projectId]/work-items/[workItemId]/integrate/route";
+import { GET as exportEvidence } from "../../src/app/api/projects/[projectId]/work-items/[workItemId]/evidence/route";
 import { issueOperatorSession } from "../../src/server/http/operator-session";
 
 const projectId = "00000000-0000-4000-8000-000000000001";
@@ -58,5 +59,21 @@ describe("AI005 operator HTTP boundary", () => {
       method: "POST", headers: { host: "127.0.0.1:3001", "content-type": "application/json", "content-length": "2" }, body: "{}",
     }), { params: Promise.resolve({ projectId, workItemId }) });
     expect(integrateResponse.status).toBe(403);
+  });
+
+  it("keeps EvidenceBundle exports operator-only and validates the format", async () => {
+    const unauthorized = await exportEvidence(
+      new Request(`http://127.0.0.1:3001/api/projects/${projectId}/work-items/${workItemId}/evidence?format=json`, { headers: { host: "127.0.0.1:3001" } }),
+      { params: Promise.resolve({ projectId, workItemId }) },
+    );
+    expect(unauthorized.status).toBe(403);
+
+    const body = "";
+    const invalidFormat = await exportEvidence(
+      new Request(`http://127.0.0.1:3001/api/projects/${projectId}/work-items/${workItemId}/evidence?format=raw`, { headers: operatorHeaders(body) }),
+      { params: Promise.resolve({ projectId, workItemId }) },
+    );
+    expect(invalidFormat.status).toBe(400);
+    expect(invalidFormat.headers.get("cache-control")).toBe("no-store");
   });
 });

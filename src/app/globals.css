@@ -1399,6 +1399,8 @@ button:not(:disabled),
 .evidence-receipt li { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.78rem; }
 .evidence-receipt li strong { color: var(--success); }
 .evidence-receipt code { display: block; overflow: hidden; text-overflow: ellipsis; font-size: 0.7rem; }
+.evidence-block { display: grid; gap: 0.55rem; }
+.evidence-export-actions { display: flex; flex-wrap: wrap; gap: 0.45rem; }
 .integration-receipt { display: grid; gap: 0.3rem; border-radius: var(--radius-md); background: var(--muted); padding: 0.65rem; font-size: 0.78rem; }
 .integration-receipt[data-status="integrated"] { background: color-mix(in srgb, var(--success) 12%, transparent); }
 .integration-receipt[data-status="waiting_approval"] { background: var(--copper-soft); }
