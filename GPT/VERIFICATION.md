@@ -319,3 +319,11 @@
   CLI returned a schema-valid acyclic implementation plan from a synthetic
   read-only repo with network/web disabled; the fixture checkout remained
   clean. No client data was used.
+- Branch commit `9686eb5` was pushed without runtime databases, `.env`, client
+  data, provider sessions or generated Playwright reports. PR #9 was clean and
+  mergeable; GitHub Actions run `29766985141` passed lint, typecheck, tests and
+  build, then PR #9 merged as `9802a659900170ee07733d49284f49c4eeb043ac`.
+- Remote and local `main` both read back `9802a65`. The restarted owner-local
+  app returned HTTP 200 on `127.0.0.1:3001`; an API read initialized migration
+  5, all seven AI-005 tables were present and `PRAGMA integrity_check` returned
+  `ok`.
