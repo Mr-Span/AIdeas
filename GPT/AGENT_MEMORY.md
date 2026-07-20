@@ -37,10 +37,11 @@
 - AI-005 implements typed architecture planning, deterministic DAG validation,
   digest-bound approval, durable task packets, immutable ContextPackets,
   fenced worktree attempts, independent verification, EvidenceBundles and a
-  policy-gated GitHub push/PR/merge adapter with readback. Final verification
-  and publication are pending on `codex/ai005-plan-execution-gate`.
-- Current priority: finish AI-005 verification/publication. Secured LAN
-  identity/transport and final purge semantics remain explicit backlog.
+  policy-gated GitHub push/PR/merge adapter with readback. AI-005 is integrated
+  through PR #9 at merge commit `9802a65`.
+- Current priority: run the first operator-selected real AIdeas work item through
+  the new vertical slice. Secured LAN identity/transport and final purge
+  semantics remain explicit backlog.
 - Verification: `pnpm.cmd verify`, then focused Playwright tests.
 - Secrets: no `.env` files, API keys, tokens, login stores, databases, client
   content, or runtime artifacts in Git.

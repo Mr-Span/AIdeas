@@ -121,7 +121,7 @@ Evidence:
 
 ## AI-005 — Final plan and autonomous execution gate
 
-Status: implemented on `codex/ai005-plan-execution-gate`; final verification and publication pending.
+Status: integrated in `main` through PR #9, merge commit `9802a65`.
 
 Acceptance:
 
