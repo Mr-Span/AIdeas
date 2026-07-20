@@ -1,5 +1,23 @@
 # Verification
 
+## 2026-07-20 — Eight-question intake
+
+- Replaced the hardcoded `4 din 8` prototype with eight navigable clarification
+  cards and progress derived only from non-empty answers.
+- Drafts can be saved at any point; submission moves to the first incomplete
+  question and accepts an explicit `Nu știu încă` as an answer.
+- Each answer persists in the versioned SQLite revision payload and in the
+  immutable `capture.md`; legacy single-idea revisions map only to the audience
+  and problem question without inventing completed answers.
+- `pnpm.cmd verify`: pass; 7 Vitest files / 35 tests and production build pass.
+- Focused Chromium end-to-end suite: pass, 2/2, including 1→8 completion,
+  save/reload persistence, submission, mobile tracker, and no horizontal
+  overflow at `390 × 844`.
+- Desktop `1280 × 900` and mobile `390 × 844` screenshots render without a
+  framework overlay. The integrated browser could not be reused after its
+  prior connection-error page was blocked by browser URL policy, so final
+  rendered evidence used the repository's isolated Chromium runner.
+
 ## 2026-07-18 — Bootstrap checks
 
 - Target path `C:\Users\claux\Documents\AIdeas` did not exist before creation.

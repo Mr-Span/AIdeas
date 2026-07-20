@@ -399,6 +399,32 @@ button:not(:disabled),
   margin-top: 0.1rem;
 }
 
+.question-navigation {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  border-top: 1px solid var(--border);
+  padding-top: 1rem;
+}
+
+.question-navigation > :first-child {
+  justify-self: start;
+}
+
+.question-navigation > :last-child {
+  justify-self: end;
+}
+
+.question-navigation > span {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+  text-align: center;
+}
+
 .utility-grid {
   display: none;
   grid-template-columns: 0.95fr 1fr 1.08fr;
@@ -972,6 +998,15 @@ button:not(:disabled),
 
   .question-surface {
     padding: 1.2rem;
+  }
+
+  .question-navigation {
+    grid-template-columns: 1fr auto 1fr;
+  }
+
+  .question-navigation > span {
+    grid-column: auto;
+    grid-row: auto;
   }
 
   .idea-textarea {

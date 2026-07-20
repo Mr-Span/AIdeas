@@ -22,14 +22,6 @@ export type WorkflowStage = {
   status: WorkflowStatus;
 };
 
-export const initialIdeaAnswer = `Produsul este pentru un client non-tehnic (de exemplu, o afacere mică sau un freelancer) care vrea să-și contureze o idee de aplicație sau site și să o transforme într-un plan tehnic clar, fără să scrie cod.
-
-Utilizatorii principali sunt antreprenori, consultanți sau persoane care au o idee, dar nu știu ce tehnologie să aleagă ori cum să o structureze.
-
-Problema rezolvată este lipsa de claritate și direcție tehnică la început, riscul de a construi ceva nepotrivit și dificultatea de a colabora eficient cu dezvoltatori.
-
-Valoarea cheie: o idee vagă devine un plan validat și executabil, susținut de cercetare și întrebări relevante.`;
-
 export const knownFacts = [
   "Produs personal, pentru lucru cu clienți non-tehnici",
   "Funcționează local, cu acces LAN opțional",

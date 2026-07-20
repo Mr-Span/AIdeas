@@ -1,4 +1,17 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+async function completeClarifications(page: Page) {
+  for (let index = 0; index < 8; index += 1) {
+    await page.locator("#idea-answer").fill(`Răspuns complet pentru întrebarea ${index + 1}.`);
+    await expect(
+      page.getByText(`${index + 1} din 8 clarificări`, { exact: true }),
+    ).toBeVisible();
+    if (index < 7) {
+      await page.getByRole("button", { name: "Înainte" }).click();
+    }
+  }
+  await expect(page.getByText("8 din 8 clarificări", { exact: true })).toBeVisible();
+}
 
 test("persists the intake, supports two-way updates, and reports truthful progress", async ({
   page,
@@ -12,6 +25,8 @@ test("persists the intake, supports two-way updates, and reports truthful progre
   await expect(providerStatus.getByText("Codex neconectat")).toBeVisible();
   await expect(providerStatus.getByText("Claude neconectat")).toBeVisible();
   await expect(page.getByRole("switch")).not.toBeChecked();
+  await expect(page.getByText("0 din 8 clarificări", { exact: true })).toBeVisible();
+  await completeClarifications(page);
 
   const repeatedFile = {
     name: "client-reference.txt",
@@ -26,6 +41,11 @@ test("persists the intake, supports two-way updates, and reports truthful progre
   await expect(
     page.getByText("Schița a fost salvată în SQLite", { exact: false }),
   ).toBeVisible();
+  await page.reload();
+  await expect(page.getByText("8 din 8 clarificări", { exact: true })).toBeVisible();
+  await expect(page.locator("#idea-answer")).toHaveValue(
+    "Răspuns complet pentru întrebarea 1.",
+  );
   await page.locator("#media-desktop").setInputFiles(repeatedFile);
   await expect(
     page.getByText("1 fișier pregătit pentru următoarea salvare."),
@@ -62,6 +82,7 @@ test("uses the mobile plan tracker without horizontal overflow", async ({
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
+  await completeClarifications(page);
 
   await expect(
     page.getByRole("navigation", { name: "Etapele proiectului pe mobil" }),

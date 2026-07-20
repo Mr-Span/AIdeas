@@ -29,9 +29,10 @@
 - Provider boundary: implement Codex owner-local first on the trusted host.
   Claude API/product mode follows only after the common contract is stable.
 - Public license: MIT, copyright 2026 Mr-Span.
-- Current code: AI-002 durable SQLite/artifact persistence, two-way public
-  collaboration, and the five-step tracker are integrated. Providers remain
-  truthfully disconnected and no agent is executed yet.
+- Current code: AI-002 durable SQLite/artifact persistence, an eight-question
+  intake with answer-derived progress, two-way public collaboration, and the
+  five-step tracker are integrated. Providers remain truthfully disconnected
+  and no agent is executed yet.
 - Current priority: AI-003 Codex owner-local feasibility and provider contract.
   Secured LAN identity/transport and final purge semantics are explicit backlog.
 - Verification: `pnpm.cmd verify`, then focused Playwright tests.

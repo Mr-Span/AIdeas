@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+import {
+  CLARIFICATION_IDS,
+  type ClarificationAnswers,
+} from "@/domain/intake-questions";
+
 export const actorKindSchema = z.enum(["operator", "client", "unverified"]);
 export const collaborationKindSchema = z.enum([
   "question",
@@ -36,6 +41,9 @@ export const saveDraftInputSchema = z.object({
   idempotencyKey: idempotencyKeySchema,
   actorKind: actorKindSchema,
   idea: z.string().max(100_000),
+  clarifications: z
+    .partialRecord(z.enum(CLARIFICATION_IDS), z.string().max(20_000))
+    .default({}),
   notes: z.string().max(100_000),
   approvalRequired: z.boolean(),
 });
@@ -61,7 +69,7 @@ export type ActorKind = z.infer<typeof actorKindSchema>;
 export type CollaborationKind = z.infer<typeof collaborationKindSchema>;
 export type PlanStepStatus = z.infer<typeof planStepStatusSchema>;
 export type CreateProjectInput = z.infer<typeof createProjectInputSchema>;
-export type SaveDraftInput = z.infer<typeof saveDraftInputSchema>;
+export type SaveDraftInput = z.input<typeof saveDraftInputSchema>;
 export type SubmitProjectInput = z.infer<typeof submitProjectInputSchema>;
 export type CollaborationInput = z.infer<typeof collaborationInputSchema>;
 
@@ -105,6 +113,7 @@ export type ClientProjectDto = {
   draft: {
     revisionId: string | null;
     idea: string;
+    clarifications: ClarificationAnswers;
     notes: string;
     approvalRequired: boolean;
     submitted: boolean;
